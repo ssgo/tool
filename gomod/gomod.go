@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-	os.Args = append(os.Args, "-u")
 	if len(os.Args) == 1 {
 		printUsage()
 		return
