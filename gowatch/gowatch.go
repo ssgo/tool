@@ -1,5 +1,4 @@
-//+build ignore
-package gowatch
+package main
 
 import (
 	"bufio"
@@ -59,7 +58,13 @@ func main() {
 				}
 			}
 		case "-t":
-			cmdArgs = append(cmdArgs, "test", "./tests")
+			fi, err := os.Stat("./tests")
+			if err == nil && fi != nil {
+				cmdArgs = append(cmdArgs, "test", "./tests")
+			} else {
+				cmdArgs = append(cmdArgs, "test", ".")
+			}
+
 		case "-b":
 			cmdArgs = append(cmdArgs, "-bench", ".*")
 		default:
@@ -138,7 +143,7 @@ func printUsage() {
 	fmt.Println("	\033[36m-p\033[0m	\033[37m指定监视的路径，默认为 ./，支持逗号隔开的多个路径\033[0m")
 	fmt.Println("	\033[36m-sh\033[0m	\033[37m指定执行的命令，默认为 go\033[0m")
 	fmt.Println("	\033[36m-r\033[0m	\033[37m执行当前目录中的程序，相当于 go run *.go\033[0m")
-	fmt.Println("	\033[36m-t\033[0m	\033[37m执行tests目录中的测试用例，相当于 go test ./tests\033[0m")
+	fmt.Println("	\033[36m-t\033[0m	\033[37m执行测试用例，相当于 go test ./tests 或 go test ./tests（自动识别是否存在tests文件夹）\033[0m")
 	fmt.Println("	\033[36m-b\033[0m	\033[37m执行性能测试，相当于 go -bench .*，需要额外指定 -t 或 test 参数\033[0m")
 	fmt.Println("	\033[36m...\033[0m	\033[37m可以使用所有 go 命令的参数\033[0m")
 	fmt.Println("")
