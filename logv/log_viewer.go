@@ -79,6 +79,9 @@ func output(line string) {
 	}
 
 	b := log.ParseBaseLog(line)
+	if b == nil {
+		fmt.Println(line)
+	}
 	showTime := b.LogTime.Format(u.StringIf(showFullTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
 	switch b.LogLevel {
 	case "debug":
