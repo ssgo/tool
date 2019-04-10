@@ -17,8 +17,6 @@ var useJson bool
 var showFullTime bool
 
 func main() {
-	os.Args = append(os.Args, "/tmp/b.log", "-f")
-
 	fileName := ""
 	for i := 1; i < len(os.Args); i++ {
 		switch os.Args[i] {
