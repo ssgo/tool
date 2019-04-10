@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/ssgo/u"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -24,6 +26,40 @@ func main() {
 			fmt.Println(line)
 		}
 		fmt.Println(len(outs), "Versions")
+	case "-l":
+		path := "./"
+		if len(os.Args) > 2 {
+			path = os.Args[2]
+			if len(path) > 0 && path[len(path)-1] != '/' {
+				path += "/"
+			}
+		}
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			fmt.Println(u.Red(err.Error()))
+			return
+		}
+		os.Chdir(path)
+		for _, file := range files {
+			fileName := file.Name()
+			if fileName[0] == '.' {
+				continue
+			}
+
+			lastVersion := ""
+			os.Chdir(fileName)
+			outs, _ := runCommand("git", "tag", "-l")
+			os.Chdir("..")
+			for i := len(outs) - 1; i >= 0; i-- {
+				if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
+					lastVersion = outs[len(outs)-1]
+					break
+				}
+			}
+			if lastVersion != "" {
+				fmt.Println(u.Cyan(fmt.Sprintf("%12s",fileName)), lastVersion)
+			}
+		}
 	case "-u":
 		oldVer := "v0.0.0"
 		outs, _ := runCommand("git", "tag", "-l")
@@ -68,10 +104,12 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("	gomod")
 	fmt.Println("	\033[36m-v\033[0m	\033[37m查看当前项目的版本列表\033[0m")
+	fmt.Println("	\033[36m-l\033[0m	\033[37m查看当前子目录项目的最新版本\033[0m")
 	fmt.Println("	\033[36m-u\033[0m	\033[37m版本号+1并提交\033[0m")
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println("	\033[36mgomod -v\033[0m")
+	fmt.Println("	\033[36mgomod -l\033[0m")
 	fmt.Println("	\033[36mgomod -u\033[0m")
 	fmt.Println("	\033[36mgomod -u v1.2.1\033[0m")
 	fmt.Println("")

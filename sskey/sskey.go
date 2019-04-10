@@ -20,7 +20,7 @@ func main() {
 	os.Mkdir(keyPath, 0700)
 
 	op := os.Args[1]
-	if (op == "-l" || op == "-c" || op == "-t" || op == "-e" || op == "-d" || op == "-o") && len(os.Args) < 3 {
+	if (op == "-c" || op == "-t" || op == "-e" || op == "-d" || op == "-o") && len(os.Args) < 3 {
 		keyName := scanLine("\033[36mPlease enter key name:\033[0m ")
 		if keyName == "" {
 			printUsage()
