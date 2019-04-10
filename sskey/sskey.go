@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
-	"github.com/ssgo/utility"
+	"github.com/ssgo/u"
 	"io/ioutil"
 	"os"
 )
@@ -25,7 +25,7 @@ func main() {
 		if keyName == "" {
 			printUsage()
 			fmt.Println("\033[31mneed key\033[0m")
-			os.Exit(0)
+			return
 		}
 		os.Args = append(os.Args, keyName)
 	}
@@ -35,7 +35,7 @@ func main() {
 		if data == "" {
 			printUsage()
 			fmt.Println("\033[31mneed data\033[0m")
-			os.Exit(0)
+			return
 		}
 		os.Args = append(os.Args, data)
 	}
@@ -45,7 +45,7 @@ func main() {
 		files, err := ioutil.ReadDir(keyPath)
 		if err != nil {
 			fmt.Println("\033[31", err, "\033[0m")
-			os.Exit(0)
+			return
 		}
 		n := 0
 		for _, file := range files {
@@ -63,28 +63,28 @@ func main() {
 		fi, err := os.Stat(keyPath + keyName)
 		if err == nil && fi != nil {
 			fmt.Println("\033[31mkey exists\033[0m")
-			os.Exit(0)
+			return
 		}
 
 		fd, err := os.OpenFile(keyPath+keyName, os.O_CREATE|os.O_WRONLY, 0400)
 		if err != nil {
 			fmt.Println("\033[31mbad key file\033[0m")
 			fmt.Println("\033[31m", err, "\033[0m")
-			os.Exit(0)
+			return
 		}
 
 		buf := make([]byte, 81)
 		for i := 0; i < 40; i++ {
-			buf[i] = byte(utility.GlobalRand1.Intn(255))
-			buf[40+i] = byte(utility.GlobalRand2.Intn(255))
+			buf[i] = byte(u.GlobalRand1.Intn(255))
+			buf[40+i] = byte(u.GlobalRand2.Intn(255))
 		}
 		buf[80] = 217
 		fd.WriteString(base64.StdEncoding.EncodeToString(buf))
 		fd.Close()
 
 		key, iv := loadKey(keyPath + os.Args[2])
-		s1 := utility.EncryptAes("Hello World!", key[2:], iv[5:])
-		s2 := utility.DecryptAes(s1, key[2:], iv[5:])
+		s1 := u.EncryptAes("Hello World!", key[2:], iv[5:])
+		s2 := u.DecryptAes(s1, key[2:], iv[5:])
 		fmt.Println("\033[36m", keyName, "\033[0m Created at", keyPath+keyName)
 		fmt.Println("  Test Encrypt: \033[33mHello World!\033[0m => \033[33m", s1, "\033[0m")
 		fmt.Println("  Test Decrypt: \033[33m", s1, "\033[0m => \033[33m", s2, "\033[0m")
@@ -92,8 +92,8 @@ func main() {
 	case "-t":
 		key, iv := loadKey(keyPath + os.Args[2])
 		s := "你好，Hello，안녕하세요，こんにちは，ON LI DAY FaOHE MASHI，hallo，bonjour，Sulut，moiẽn，hej,hallå，halló，illāc，‏هتاف للترحيب, ‏أهلا，!السلام عليكم，درود，הלו ，גוט־מאָרגן ，привет，Dzień dobry，байна уу,мэнд її，नम्स्कार，नमस्ते"
-		s1 := utility.EncryptAes(s, key[2:], iv[5:])
-		s2 := utility.DecryptAes(s1, key[2:], iv[5:])
+		s1 := u.EncryptAes(s, key[2:], iv[5:])
+		s2 := u.DecryptAes(s1, key[2:], iv[5:])
 		fmt.Println("  Test Encrypt: \033[33m", s[0:20]+"...", "\033[0m => \033[33m", s1, "\033[0m")
 		fmt.Println("  Test Decrypt: \033[33m", s1, "\033[0m => \033[33m", s2[0:20]+"...", "\033[0m")
 		if s2 != s {
@@ -108,8 +108,8 @@ func main() {
 	case "-e":
 		key, iv := loadKey(keyPath + os.Args[2])
 		s := os.Args[3]
-		s1 := utility.EncryptAes(s, key[2:], iv[5:])
-		s2 := utility.DecryptAes(s1, key[2:], iv[5:])
+		s1 := u.EncryptAes(s, key[2:], iv[5:])
+		s2 := u.DecryptAes(s1, key[2:], iv[5:])
 		fmt.Println("Encrypted: \033[33m", s1, "\033[0m")
 		if s2 != s {
 			fmt.Println("\033[31mTest Failed\033[0m")
@@ -122,7 +122,7 @@ func main() {
 
 	case "-d":
 		key, iv := loadKey(keyPath + os.Args[2])
-		s2 := utility.DecryptAes(os.Args[3], key[2:], iv[5:])
+		s2 := u.DecryptAes(os.Args[3], key[2:], iv[5:])
 		fmt.Println("Decrypted: \033[33m", s2, "\033[0m")
 
 	case "-o":
@@ -130,8 +130,8 @@ func main() {
 		keyOffsets := make([]int, 40)
 		ivOffsets := make([]int, 40)
 		for i := 0; i < 40; i++ {
-			keyOffsets[i] = utility.GlobalRand1.Intn(127)
-			ivOffsets[i] = utility.GlobalRand2.Intn(127)
+			keyOffsets[i] = u.GlobalRand1.Intn(127)
+			ivOffsets[i] = u.GlobalRand2.Intn(127)
 			if key[i] > 127 {
 				keyOffsets[i] *= -1
 			}
@@ -145,7 +145,7 @@ func main() {
 		fmt.Println()
 		fmt.Println("import (")
 		fmt.Println("	\"fmt\"")
-		fmt.Println("	\"github.com/ssgo/utility\"")
+		fmt.Println("	\"github.com/ssgo/u\"")
 		fmt.Println("	\"os\"")
 		fmt.Println(")")
 		fmt.Println()
@@ -181,16 +181,14 @@ func main() {
 		fmt.Println("		return")
 		fmt.Println("	}")
 
-		fmt.Println("	s1 := utility.EncryptAes(os.Args[1], key[2:], iv[5:])")
-		fmt.Println("	s2 := utility.DecryptAes(s1, key[2:], iv[5:])")
+		fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
+		fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
 		fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
 		fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
 
 		fmt.Println("}")
 
 	default:
-		key := make([]byte, 0)
-		key = append(key, 111)
 		printUsage()
 	}
 	fmt.Println()
