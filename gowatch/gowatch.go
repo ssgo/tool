@@ -199,7 +199,7 @@ func runCommand(command string, args ...string) {
 		} else if strings.HasPrefix(line, "	") {
 			fmt.Println(line)
 		} else {
-			fmt.Println("\033[37m", line, "\033[0m")
+			fmt.Println(line)
 		}
 	}
 
