@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/ssgo/u"
 	"io"
 	"io/ioutil"
 	"os"
@@ -187,15 +188,16 @@ func runCommand(command string, args ...string) {
 		}
 		line := strings.TrimRight(string(lineBuf), "\r\n")
 		if strings.HasPrefix(line, "ok ") {
-			fmt.Println("\033[42m", line, "\033[0m")
+			fmt.Println(u.BGreen(line))
 		} else if strings.HasPrefix(line, "FAIL	") {
-			fmt.Println("\033[41m", line, "\033[0m")
+			fmt.Println(u.BRed(line))
 		} else if strings.Index(line, ".go:") != -1 {
-			if strings.Index(line, "go/src") != -1 {
-				fmt.Println(line)
-			} else {
-				fmt.Println("\033[36m", line, "\033[0m")
-			}
+			fmt.Println(line)
+			//if strings.Index(line, "go/src") != -1 {
+			//	fmt.Println(line)
+			//} else {
+			//	fmt.Println("\033[36m", line, "\033[0m")
+			//}
 		} else if strings.HasPrefix(line, "	") {
 			fmt.Println(line)
 		} else {
@@ -246,17 +248,21 @@ func watchPath(path string) {
 		return
 	}
 	for _, file := range files {
-		fileBytes := []byte(file.Name())
-		if fileBytes[0] == '.' {
+		fileName := file.Name()
+		//fileBytes := []byte(file.Name())
+		if fileName[0] == '.' {
 			continue
 		}
 		if file.IsDir() {
 			watchPath(path + file.Name() + "/")
 		} else {
-			l := len(fileBytes)
-			if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
+			if !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") {
 				continue
 			}
+			//l := len(fileBytes)
+			//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
+			//	continue
+			//}
 			if filesModTime[path+file.Name()] == 0 {
 				filesModTime[path+file.Name()] = 1
 			}

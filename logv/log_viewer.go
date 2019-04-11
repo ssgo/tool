@@ -132,12 +132,42 @@ func output(line string) {
 			}
 		}
 	} else {
-		fmt.Print(" ", u.White(u.StringIf(b.LogType=="undefined","-",b.LogType), u.AttrBold))
+		fmt.Print(" ", u.White(u.StringIf(b.LogType == "undefined", "-", b.LogType), u.AttrBold))
+
+		levelMessage := b.Extra[b.LogLevel]
+		if levelMessage != nil {
+			delete(b.Extra, b.LogLevel)
+			switch b.LogLevel {
+			case "debug":
+				fmt.Print("  ", u.Dim(levelMessage))
+			case "info":
+				fmt.Print("  ", levelMessage)
+			case "warning":
+				fmt.Print("  ", u.Yellow(levelMessage))
+			case "error":
+				fmt.Print("  ", u.Red(levelMessage))
+			}
+		}
 	}
 
 	if b.Extra != nil {
 		for k, v := range b.Extra {
 			fmt.Print("  ", u.White(k+":", u.AttrDim, u.AttrItalic), v)
+		}
+	}
+
+	if b.Traces != "" {
+		traces := strings.Split(b.Traces, "; ")
+		fmt.Print(" ")
+		for _, v := range traces {
+			switch b.LogLevel {
+			case "error":
+				fmt.Print(" ", u.Red(v, u.AttrDim, u.AttrItalic))
+			case "warning":
+				fmt.Print(" ", u.Yellow(v, u.AttrDim, u.AttrItalic))
+			default:
+				fmt.Print(" ", u.White(v, u.AttrDim, u.AttrItalic))
+			}
 		}
 	}
 	fmt.Println()
