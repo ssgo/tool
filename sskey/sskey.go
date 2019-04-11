@@ -20,7 +20,7 @@ func main() {
 	os.Mkdir(keyPath, 0700)
 
 	op := os.Args[1]
-	if (op == "-c" || op == "-t" || op == "-e" || op == "-d" || op == "-o") && len(os.Args) < 3 {
+	if (op == "-c" || op == "-t" || op == "-o") && len(os.Args) < 3 {
 		keyName := scanLine("\033[36mPlease enter key name:\033[0m ")
 		if keyName == "" {
 			printUsage()
@@ -30,7 +30,7 @@ func main() {
 		os.Args = append(os.Args, keyName)
 	}
 
-	if (op == "-e" || op == "-d") && len(os.Args) < 4 {
+	if (op == "-e" || op == "-d") && len(os.Args) < 3 {
 		data := scanLine("\033[36mPlease enter data:\033[0m ")
 		if data == "" {
 			printUsage()
@@ -106,10 +106,20 @@ func main() {
 		}
 
 	case "-e":
-		key, iv := loadKey(keyPath + os.Args[2])
-		s := os.Args[3]
-		s1 := u.EncryptAes(s, key[2:], iv[5:])
-		s2 := u.DecryptAes(s1, key[2:], iv[5:])
+		var key, iv []byte
+		var s string
+		if len(os.Args) > 3 {
+			key, iv = loadKey(keyPath + os.Args[2])
+			key = key[2:]
+			iv = iv[5:]
+			s = os.Args[3]
+		}else{
+			key = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
+			iv = []byte("VFs7@sK61cj^f?HZ")
+			s = os.Args[2]
+		}
+		s1 := u.EncryptAes(s, key, iv)
+		s2 := u.DecryptAes(s1, key, iv)
 		fmt.Println("Encrypted: \033[33m", s1, "\033[0m")
 		if s2 != s {
 			fmt.Println("\033[31mTest Failed\033[0m")
@@ -121,8 +131,19 @@ func main() {
 		}
 
 	case "-d":
-		key, iv := loadKey(keyPath + os.Args[2])
-		s2 := u.DecryptAes(os.Args[3], key[2:], iv[5:])
+		var key, iv []byte
+		var s string
+		if len(os.Args) > 3 {
+			key, iv = loadKey(keyPath + os.Args[2])
+			key = key[2:]
+			iv = iv[5:]
+			s = os.Args[3]
+		}else{
+			key = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
+			iv = []byte("VFs7@sK61cj^f?HZ")
+			s = os.Args[2]
+		}
+		s2 := u.DecryptAes(s, key, iv)
 		fmt.Println("Decrypted: \033[33m", s2, "\033[0m")
 
 	case "-o":
@@ -253,14 +274,16 @@ func printUsage() {
 	fmt.Println("	\033[36m-l\033[0m		\033[37mList all saved keys\033[0m")
 	fmt.Println("	\033[36m-c keyName\033[0m	\033[37mCreate a new key and save it\033[0m")
 	fmt.Println("	\033[36m-t keyName\033[0m	\033[37mTest key\033[0m")
-	fmt.Println("	\033[36m-e keyName data\033[0m	\033[37mEncrypt data by specified key\033[0m")
-	fmt.Println("	\033[36m-d keyName data\033[0m	\033[37mDecrypt data by specified key\033[0m")
+	fmt.Println("	\033[36m-e [keyName] data\033[0m	\033[37mEncrypt data by specified key or default key\033[0m")
+	fmt.Println("	\033[36m-d [keyName] data\033[0m	\033[37mDecrypt data by specified key or default key\033[0m")
 	fmt.Println("	\033[36m-o keyName\033[0m	\033[37mOutput golang code\033[0m")
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println("	\033[36msskey -l\033[0m")
 	fmt.Println("	\033[36msskey -c aaa\033[0m")
 	fmt.Println("	\033[36msskey -t aaa\033[0m")
+	fmt.Println("	\033[36msskey -e 123456\033[0m")
+	fmt.Println("	\033[36msskey -d vcg9B/GX3Tqf1EWfpfDeMw==\033[0m")
 	fmt.Println("	\033[36msskey -e aaa 123456\033[0m")
 	fmt.Println("	\033[36msskey -d aaa gAx9Wq7YN85WKSFj7kBcHg==\033[0m")
 	fmt.Println("	\033[36msskey -o aaa\033[0m")

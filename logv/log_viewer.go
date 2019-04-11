@@ -110,13 +110,13 @@ func output(line string) {
 			fmt.Print("  ", r.Method, " ", r.Host, u.Cyan(r.Path))
 			if r.RequestData != nil {
 				for k, v := range r.RequestData {
-					fmt.Print("  ", u.Magenta(k, u.AttrItalic), u.Dim(":"), v)
+					fmt.Print("  ", u.Magenta(k, u.AttrItalic), u.Dim(":"), u.String(v))
 				}
 			}
 			if showFullTime {
 				if r.RequestHeaders != nil {
 					for k, v := range r.RequestHeaders {
-						fmt.Print("  ", u.Magenta(k, u.AttrDim, u.AttrItalic), u.Dim(":"), v)
+						fmt.Print("  ", u.Magenta(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
 					}
 				}
 			}
@@ -125,7 +125,7 @@ func output(line string) {
 			if showFullTime {
 				if r.ResponseHeaders != nil {
 					for k, v := range r.ResponseHeaders {
-						fmt.Print("  ", u.Blue(k, u.AttrDim, u.AttrItalic), u.Dim(":"), v)
+						fmt.Print("  ", u.Blue(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
 					}
 				}
 				fmt.Print("  ", u.String(r.ResponseData))
@@ -152,7 +152,7 @@ func output(line string) {
 
 	if b.Extra != nil {
 		for k, v := range b.Extra {
-			fmt.Print("  ", u.White(k+":", u.AttrDim, u.AttrItalic), v)
+			fmt.Print("  ", u.White(k+":", u.AttrDim, u.AttrItalic), u.String(v))
 		}
 	}
 
