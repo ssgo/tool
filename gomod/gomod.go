@@ -57,7 +57,7 @@ func main() {
 				}
 			}
 			if lastVersion != "" {
-				fmt.Println(u.Cyan(fmt.Sprintf("%12s",fileName)), lastVersion)
+				fmt.Println(u.Cyan(fmt.Sprintf("%12s", fileName)), lastVersion)
 			}
 		}
 	case "-u":
@@ -93,10 +93,106 @@ func main() {
 		for _, line := range outs {
 			fmt.Println(line)
 		}
+
 		fmt.Println("Done")
 
+	case "-c", "-cf", "-fc":
+		force := len(os.Args[1]) > 2 || (len(os.Args) > 2 && os.Args[2] == "-f")
+		goPathLines, _ := runCommand("go", "env", "GOPATH")
+		goPath := "~/go/"
+		if len(goPathLines) > 0 {
+			goPath = goPathLines[0] + "/"
+		}
+		err := os.MkdirAll(goPath+"gomod/checks", 0755)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		mods := map[string]string{}
+		modLines, _ := readFile("go.mod")
+		modReadState := 0
+		for _, line := range modLines {
+			line = strings.TrimSpace(line)
+			if line == "require (" {
+				modReadState = 1
+				continue
+			}
+			if modReadState == 1 {
+				if line == ")" {
+					break
+				}
+				kv := strings.Split(line, " ")
+				if len(kv) != 2 {
+					continue
+				}
+				mods[kv[0]] = kv[1]
+			}
+		}
+
+		lastMods := map[string]string{}
+		maxModLen := 0
+		for mod := range mods {
+			_ = os.Chdir(goPath + "gomod/checks")
+
+			if len(mod) > maxModLen {
+				maxModLen = len(mod)
+			}
+			modPaths := strings.Split(mod, "/")
+			modName := modPaths[len(modPaths)-1]
+			if fileExists(modName + ".git") {
+				_ = os.Chdir(modName + ".git")
+				if force {
+					fmt.Println(u.Cyan("updating " + mod))
+					err = printCommand("git", "fetch")
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+			} else {
+				fmt.Println(u.Cyan("cloning " + mod))
+				err = printCommand("git", "clone", "--bare", "https://"+mod)
+				if err != nil {
+					fmt.Println(err)
+				}
+				_ = os.Chdir(modName + ".git")
+			}
+
+			lastVer := ""
+			outs, _ := runCommand("git", "tag", "-l")
+			for i := len(outs) - 1; i >= 0; i-- {
+				if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
+					lastVer = outs[len(outs)-1]
+					break
+				}
+			}
+
+			lastMods[mod] = lastVer
+		}
+
+		for mod, ver := range mods {
+			lastVer := lastMods[mod]
+			if lastVer == ver {
+				fmt.Printf(fmt.Sprint("%-", maxModLen+1, "s %s\n"), mod, u.BGreen(ver))
+			} else {
+				fmt.Printf(fmt.Sprint("%-", maxModLen+1, "s %s => %s\n"), mod, u.BRed(ver), u.Green(lastVer))
+			}
+		}
+
 	default:
-		printUsage()
+		if len(os.Args) > 1 {
+			if os.Args[1] == "tidy" {
+				_ = os.Remove("go.sum")
+			}
+			args := []string{"mod"}
+			args = append(args, os.Args[1:]...)
+			outs, _ := runCommand("go", args...)
+			for _, line := range outs {
+				fmt.Println(line)
+			}
+		} else {
+			printUsage()
+		}
 	}
 }
 
@@ -106,13 +202,33 @@ func printUsage() {
 	fmt.Println("	\033[36m-v\033[0m	\033[37m查看当前项目的版本列表\033[0m")
 	fmt.Println("	\033[36m-l\033[0m	\033[37m查看当前子目录项目的最新版本\033[0m")
 	fmt.Println("	\033[36m-u\033[0m	\033[37m版本号+1并提交\033[0m")
+	fmt.Println("	\033[36m-c [-f]\033[0m	\033[37m检查 go.mod 中依赖的包的最新版本，-f会强制更新已缓存版本\033[0m")
+	fmt.Println("	\033[36minit tidy download vendor verify why help\033[0m	\033[37m等同于 go mod ...\033[0m")
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println("	\033[36mgomod -v\033[0m")
 	fmt.Println("	\033[36mgomod -l\033[0m")
 	fmt.Println("	\033[36mgomod -u\033[0m")
 	fmt.Println("	\033[36mgomod -u v1.2.1\033[0m")
+	fmt.Println("	\033[36mgomod -c\033[0m")
+	fmt.Println("	\033[36mgomod -c -f\033[0m")
+	fmt.Println("	\033[36mgomod init ...\033[0m")
+	fmt.Println("	\033[36mgomod tidy\033[0m")
+	fmt.Println("	\033[36mgomod download\033[0m")
+	fmt.Println("	\033[36mgomod vendor\033[0m")
+	fmt.Println("	\033[36mgomod verify\033[0m")
+	fmt.Println("	\033[36mgomod why\033[0m")
+	fmt.Println("	\033[36mgomod help\033[0m")
 	fmt.Println("")
+}
+
+func printCommand(command string, args ...string) error {
+	fmt.Println(command, strings.Join(args, " "))
+	lines, err := runCommand(command, args...)
+	for _, line := range lines {
+		fmt.Println(line)
+	}
+	return err
 }
 
 func runCommand(command string, args ...string) ([]string, error) {
@@ -143,4 +259,29 @@ func runCommand(command string, args ...string) ([]string, error) {
 
 	cmd.Wait()
 	return outs, nil
+}
+
+func readFile(fileName string) ([]string, error) {
+	outs := make([]string, 0)
+	fd, err := os.OpenFile("go.mod", os.O_RDONLY, 0400)
+	if err != nil {
+		return outs, err
+	}
+
+	inputReader := bufio.NewReader(fd)
+	for {
+		line, err := inputReader.ReadString('\n')
+		line = strings.TrimRight(string(line), "\r\n")
+		outs = append(outs, line)
+		if err != nil {
+			break
+		}
+	}
+	fd.Close()
+	return outs, nil
+}
+
+func fileExists(fileName string) bool {
+	fi, err := os.Stat(fileName)
+	return err == nil && fi != nil
 }
