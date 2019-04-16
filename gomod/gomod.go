@@ -21,12 +21,12 @@ func main() {
 	op := os.Args[1]
 	switch op {
 	case "-v":
-		outs, _ := runCommand("git", "tag", "-l")
+		outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
 		for _, line := range outs {
 			fmt.Println(line)
 		}
 		fmt.Println(len(outs), "Versions")
-	case "-l":
+	case "-l", "v*", "--sort=taggerdate":
 		path := "./"
 		if len(os.Args) > 2 {
 			path = os.Args[2]
@@ -48,7 +48,7 @@ func main() {
 
 			lastVersion := ""
 			os.Chdir(fileName)
-			outs, _ := runCommand("git", "tag", "-l")
+			outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
 			os.Chdir("..")
 			for i := len(outs) - 1; i >= 0; i-- {
 				if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
@@ -62,7 +62,7 @@ func main() {
 		}
 	case "-u":
 		oldVer := "v0.0.0"
-		outs, _ := runCommand("git", "tag", "-l")
+		outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
 		for i := len(outs) - 1; i >= 0; i-- {
 			if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
 				oldVer = outs[len(outs)-1]
@@ -126,6 +126,9 @@ func main() {
 				if len(kv) != 2 {
 					continue
 				}
+				if strings.Index(kv[0], "golang.org") != -1 {
+					continue
+				}
 				mods[kv[0]] = kv[1]
 			}
 		}
@@ -140,15 +143,16 @@ func main() {
 			}
 			modPaths := strings.Split(mod, "/")
 			modName := modPaths[len(modPaths)-1]
+
+			if force {
+				err = os.RemoveAll(modName + ".git")
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+
 			if fileExists(modName + ".git") {
 				_ = os.Chdir(modName + ".git")
-				if force {
-					fmt.Println(u.Cyan("updating " + mod))
-					err = printCommand("git", "fetch")
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
 			} else {
 				fmt.Println(u.Cyan("cloning " + mod))
 				err = printCommand("git", "clone", "--bare", "https://"+mod)
@@ -159,7 +163,7 @@ func main() {
 			}
 
 			lastVer := ""
-			outs, _ := runCommand("git", "tag", "-l")
+			outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
 			for i := len(outs) - 1; i >= 0; i-- {
 				if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
 					lastVer = outs[len(outs)-1]
