@@ -7,6 +7,7 @@ import (
 	"github.com/ssgo/u"
 	"io/ioutil"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -21,20 +22,20 @@ func main() {
 
 	op := os.Args[1]
 	if (op == "-c" || op == "-t" || op == "-o") && len(os.Args) < 3 {
-		keyName := scanLine("\033[36mPlease enter key name:\033[0m ")
+		keyName := scanLine(u.Cyan("Please enter key name: "))
 		if keyName == "" {
 			printUsage()
-			fmt.Println("\033[31mneed key\033[0m")
+			fmt.Println(u.Red("need key"))
 			return
 		}
 		os.Args = append(os.Args, keyName)
 	}
 
 	if (op == "-e" || op == "-d") && len(os.Args) < 3 {
-		data := scanLine("\033[36mPlease enter data:\033[0m ")
+		data := scanLine(u.Cyan("Please enter data: "))
 		if data == "" {
 			printUsage()
-			fmt.Println("\033[31mneed data\033[0m")
+			fmt.Println(u.Red("need data"))
 			return
 		}
 		os.Args = append(os.Args, data)
@@ -44,7 +45,7 @@ func main() {
 	case "-l":
 		files, err := ioutil.ReadDir(keyPath)
 		if err != nil {
-			fmt.Println("\033[31", err, "\033[0m")
+			fmt.Println(u.Red(err.Error()))
 			return
 		}
 		n := 0
@@ -54,7 +55,7 @@ func main() {
 				continue
 			}
 			n++
-			fmt.Print("	\033[36m", fileName, "\033[0m	\033[37m", keyPath, fileName, "\033[0m\n")
+			fmt.Println(u.Cyan(fileName), "	", u.White(keyPath+" "+fileName))
 		}
 		fmt.Println(n, "Keys")
 	case "-c":
@@ -62,14 +63,14 @@ func main() {
 
 		fi, err := os.Stat(keyPath + keyName)
 		if err == nil && fi != nil {
-			fmt.Println("\033[31mkey exists\033[0m")
+			fmt.Println(u.Red("key exists"))
 			return
 		}
 
 		fd, err := os.OpenFile(keyPath+keyName, os.O_CREATE|os.O_WRONLY, 0400)
 		if err != nil {
-			fmt.Println("\033[31mbad key file\033[0m")
-			fmt.Println("\033[31m", err, "\033[0m")
+			fmt.Println(u.Red("bad key file"))
+			fmt.Println(u.Red(err.Error()))
 			return
 		}
 
@@ -85,24 +86,24 @@ func main() {
 		key, iv := loadKey(keyPath + os.Args[2])
 		s1 := u.EncryptAes("Hello World!", key[2:], iv[5:])
 		s2 := u.DecryptAes(s1, key[2:], iv[5:])
-		fmt.Println("\033[36m", keyName, "\033[0m Created at", keyPath+keyName)
-		fmt.Println("  Test Encrypt: \033[33mHello World!\033[0m => \033[33m", s1, "\033[0m")
-		fmt.Println("  Test Decrypt: \033[33m", s1, "\033[0m => \033[33m", s2, "\033[0m")
+		fmt.Println(u.Cyan(keyName), " Created at", keyPath+keyName)
+		fmt.Println("  Test Encrypt: ", u.Yellow("Hello World! "+s1))
+		fmt.Println("  Test Decrypt: ", u.Yellow(s1), "=>", u.Yellow(s2))
 
 	case "-t":
 		key, iv := loadKey(keyPath + os.Args[2])
 		s := "你好，Hello，안녕하세요，こんにちは，ON LI DAY FaOHE MASHI，hallo，bonjour，Sulut，moiẽn，hej,hallå，halló，illāc，‏هتاف للترحيب, ‏أهلا，!السلام عليكم，درود，הלו ，גוט־מאָרגן ，привет，Dzień dobry，байна уу,мэнд її，नम्स्कार，नमस्ते"
 		s1 := u.EncryptAes(s, key[2:], iv[5:])
 		s2 := u.DecryptAes(s1, key[2:], iv[5:])
-		fmt.Println("  Test Encrypt: \033[33m", s[0:20]+"...", "\033[0m => \033[33m", s1, "\033[0m")
-		fmt.Println("  Test Decrypt: \033[33m", s1, "\033[0m => \033[33m", s2[0:20]+"...", "\033[0m")
+		fmt.Println("  Test Encrypt: ", u.Yellow(s[0:20]+"..."), "=>", u.Yellow(s1))
+		fmt.Println("  Test Decrypt: ", u.Yellow(s1), "=>", u.Yellow(s2[0:20]+"..."))
 		if s2 != s {
-			fmt.Println("\033[31mTest Failed\033[0m")
-			fmt.Println("  \033[33m", s, "\033[0m")
-			fmt.Println("  \033[33m", s2, "\033[0m")
+			fmt.Println(u.Red("Test Failed"))
+			fmt.Println("  ", u.Yellow(s))
+			fmt.Println("  ", u.Yellow(s2))
 		} else {
 			fmt.Println()
-			fmt.Println("\033[32mTest Succeed\033[0m")
+			fmt.Println(u.Green("Test Succeed"))
 		}
 
 	case "-e":
@@ -113,21 +114,21 @@ func main() {
 			key = key[2:]
 			iv = iv[5:]
 			s = os.Args[3]
-		}else{
+		} else {
 			key = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
 			iv = []byte("VFs7@sK61cj^f?HZ")
 			s = os.Args[2]
 		}
 		s1 := u.EncryptAes(s, key, iv)
 		s2 := u.DecryptAes(s1, key, iv)
-		fmt.Println("Encrypted: \033[33m", s1, "\033[0m")
+		fmt.Println("Encrypted: ", u.Yellow(s1))
 		if s2 != s {
-			fmt.Println("\033[31mTest Failed\033[0m")
-			fmt.Println("  \033[33m", s, "\033[0m")
-			fmt.Println("  \033[33m", s2, "\033[0m")
+			fmt.Println(u.Red("Test Failed"))
+			fmt.Println(u.Yellow(s))
+			fmt.Println(u.Yellow(s2))
 		} else {
 			fmt.Println()
-			fmt.Println("\033[32mDecrypt test Succeed\033[0m")
+			fmt.Println(u.Green("Decrypt test Succeed"))
 		}
 
 	case "-d":
@@ -138,13 +139,13 @@ func main() {
 			key = key[2:]
 			iv = iv[5:]
 			s = os.Args[3]
-		}else{
+		} else {
 			key = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
 			iv = []byte("VFs7@sK61cj^f?HZ")
 			s = os.Args[2]
 		}
 		s2 := u.DecryptAes(s, key, iv)
-		fmt.Println("Decrypted: \033[33m", s2, "\033[0m")
+		fmt.Println("Decrypted: ", u.Yellow(s2))
 
 	case "-o":
 		key, iv := loadKey(keyPath + os.Args[2])
@@ -231,21 +232,21 @@ func scanLine(hint string) string {
 func loadKey(keyFile string) ([]byte, []byte) {
 	fi, err := os.Stat(keyFile)
 	if err != nil || fi == nil {
-		fmt.Println("\033[31m", keyFile, " not exists\033[0m")
+		fmt.Println(u.Red(keyFile))
 		os.Exit(0)
 	}
 
 	fd, err := os.OpenFile(keyFile, os.O_RDONLY, 0400)
 	if err != nil {
-		fmt.Println("\033[31mbad key file\033[0m")
-		fmt.Println("\033[31m", err, "\033[0m")
+		fmt.Println(u.Red("bad key file"))
+		fmt.Println(u.Red(err.Error()))
 		os.Exit(0)
 	}
 
 	readBuf := make([]byte, 1024)
 	readSize, err := fd.Read(readBuf)
 	if err != nil {
-		fmt.Println("\033[31m", err, "\033[0m")
+		fmt.Println(u.Red(err.Error()))
 		os.Exit(0)
 	}
 	fd.Close()
@@ -253,15 +254,15 @@ func loadKey(keyFile string) ([]byte, []byte) {
 	buf := make([]byte, 100)
 	n, err := base64.StdEncoding.Decode(buf, readBuf[0:readSize])
 	if err != nil {
-		fmt.Println("\033[31m", err, "\033[0m")
+		fmt.Println(u.Red(err.Error()))
 		os.Exit(0)
 	}
 	if n != 81 {
-		fmt.Println("\033[31mbad key length", n, "\033[0m")
+		fmt.Println(u.Red("bad key length " + strconv.Itoa(n)))
 		os.Exit(0)
 	}
 	if buf[80] != 217 {
-		fmt.Println("\033[31mbad check bit", buf[80], "\033[0m")
+		fmt.Println(u.Red("bad check bit " + string(buf[80])))
 		os.Exit(0)
 	}
 
@@ -271,21 +272,21 @@ func loadKey(keyFile string) ([]byte, []byte) {
 func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("	sskey")
-	fmt.Println("	\033[36m-l\033[0m		\033[37mList all saved keys\033[0m")
-	fmt.Println("	\033[36m-c keyName\033[0m	\033[37mCreate a new key and save it\033[0m")
-	fmt.Println("	\033[36m-t keyName\033[0m	\033[37mTest key\033[0m")
-	fmt.Println("	\033[36m-e [keyName] data\033[0m	\033[37mEncrypt data by specified key or default key\033[0m")
-	fmt.Println("	\033[36m-d [keyName] data\033[0m	\033[37mDecrypt data by specified key or default key\033[0m")
-	fmt.Println("	\033[36m-o keyName\033[0m	\033[37mOutput golang code\033[0m")
+	fmt.Println(u.Cyan("	-l		") + u.White("List all saved keys"))
+	fmt.Println(u.Cyan("	-c keyName	") + u.White("Create a new key and save it"))
+	fmt.Println(u.Cyan("	-t keyName	") + u.White("Test key"))
+	fmt.Println(u.Cyan("	-e [keyName] data	") + u.White("Encrypt data by specified key or default key"))
+	fmt.Println(u.Cyan("	-d [keyName] data	") + u.White("Decrypt data by specified key or default key"))
+	fmt.Println(u.Cyan("	-o keyName	") + u.White("Output golang code"))
 	fmt.Println("")
 	fmt.Println("Samples:")
-	fmt.Println("	\033[36msskey -l\033[0m")
-	fmt.Println("	\033[36msskey -c aaa\033[0m")
-	fmt.Println("	\033[36msskey -t aaa\033[0m")
-	fmt.Println("	\033[36msskey -e 123456\033[0m")
-	fmt.Println("	\033[36msskey -d vcg9B/GX3Tqf1EWfpfDeMw==\033[0m")
-	fmt.Println("	\033[36msskey -e aaa 123456\033[0m")
-	fmt.Println("	\033[36msskey -d aaa gAx9Wq7YN85WKSFj7kBcHg==\033[0m")
-	fmt.Println("	\033[36msskey -o aaa\033[0m")
+	fmt.Println(u.Cyan("	sskey -l"))
+	fmt.Println(u.Cyan("	sskey -c aaa"))
+	fmt.Println(u.Cyan("	sskey -t aaa"))
+	fmt.Println(u.Cyan("	sskey -e 123456"))
+	fmt.Println(u.Cyan("	sskey -d vcg9B/GX3Tqf1EWfpfDeMw=="))
+	fmt.Println(u.Cyan("	sskey -e aaa 123456"))
+	fmt.Println(u.Cyan("	sskey -d aaa gAx9Wq7YN85WKSFj7kBcHg=="))
+	fmt.Println(u.Cyan("	sskey -o aaa"))
 	fmt.Println("")
 }
