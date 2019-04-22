@@ -51,7 +51,7 @@ func main() {
 		var err error
 		fd, err = os.Open(fileName)
 		if err != nil {
-			fmt.Println("\033[31m", err, "\033[0m")
+			fmt.Println(u.Red(err.Error()))
 			return
 		}
 	} else {
@@ -176,12 +176,12 @@ func output(line string) {
 func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("	lv [-j] [-f] [file]")
-	fmt.Println("	\033[36m-j\033[0m		\033[37mJosn output\033[0m")
-	fmt.Println("	\033[36m-f\033[0m		\033[37mshow full time\033[0m")
+	fmt.Println("	" + u.Cyan("-j") + u.White("Josn output"))
+	fmt.Println("	" + u.Cyan("-f") + u.White("show full time"))
 	fmt.Println("")
 	fmt.Println("Samples:")
-	fmt.Println("	\033[36mtail ***.log | lv\033[0m")
-	fmt.Println("	\033[36mlv ***.log\033[0m")
-	fmt.Println("	\033[36mtail ***.log | lv -j -f\033[0m")
+	fmt.Println("	" + u.Cyan("tail ***.log | lv"))
+	fmt.Println("	" + u.Cyan("lv ***.log"))
+	fmt.Println("	" + u.Cyan("tail ***.log | lv -j -f"))
 	fmt.Println("")
 }

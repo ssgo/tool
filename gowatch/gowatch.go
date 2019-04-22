@@ -114,7 +114,7 @@ func main() {
 		select {
 		case <-changed:
 			os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
-			fmt.Printf("[Watching \033[36m%s\033[0m] [Running \033[36m%s %s\033[0m]\n\n", strings.Join(basePaths, " "), cmd, strings.Join(cmdArgs, " "))
+			fmt.Printf("[Watching "+u.Cyan("%s")+" [Running "+u.Cyan("%s %s")+"\n\n", strings.Join(basePaths, " "), cmd, strings.Join(cmdArgs, " "))
 
 			runPos := -1
 			for i, arg := range cmdArgs {
@@ -128,7 +128,7 @@ func main() {
 				buildArgs := append([]string{}, cmdArgs[0:runPos]...)
 				buildArgs = append(buildArgs, "build", "-o", ".run")
 				buildArgs = append(buildArgs, cmdArgs[runPos+1:]...)
-				fmt.Printf("Building \033[36m%s %s\033[0m\n", cmd, strings.Join(buildArgs, " "))
+				fmt.Printf("Building "+u.Cyan("%s %s")+"\n", cmd, strings.Join(buildArgs, " "))
 				runCommand(cmd, buildArgs...)
 				runCommand("./.run")
 			} else {
@@ -140,23 +140,23 @@ func main() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("	gowatch \033[37m[-p paths] [-t] [-b] [...]\033[0m")
-	fmt.Println("	\033[36m-p\033[0m	\033[37m指定监视的路径，默认为 ./，支持逗号隔开的多个路径\033[0m")
-	fmt.Println("	\033[36m-sh\033[0m	\033[37m指定执行的命令，默认为 go\033[0m")
-	fmt.Println("	\033[36m-r\033[0m	\033[37m执行当前目录中的程序，相当于 go run *.go\033[0m")
-	fmt.Println("	\033[36m-t\033[0m	\033[37m执行测试用例，相当于 go test ./tests 或 go test ./tests（自动识别是否存在tests文件夹）\033[0m")
-	fmt.Println("	\033[36m-b\033[0m	\033[37m执行性能测试，相当于 go -bench .*，需要额外指定 -t 或 test 参数\033[0m")
-	fmt.Println("	\033[36m...\033[0m	\033[37m可以使用所有 go 命令的参数\033[0m")
+	fmt.Println("	gowatch " + u.White("[-p paths] [-t] [-b] [...]"))
+	fmt.Println("	" + u.Cyan("-p") + "	" + u.White("指定监视的路径，默认为 ./，支持逗号隔开的多个路径"))
+	fmt.Println("	" + u.Cyan("-sh") + "	" + u.White("指定执行的命令，默认为 go"))
+	fmt.Println("	" + u.Cyan("-r") + "	" + u.White("执行当前目录中的程序，相当于 go run *.go"))
+	fmt.Println("	" + u.Cyan("-t") + "	" + u.White("执行测试用例，相当于 go test ./tests 或 go test ./tests（自动识别是否存在tests文件夹）"))
+	fmt.Println("	" + u.Cyan("-b") + "	" + u.White("执行性能测试，相当于 go -bench .*，需要额外指定 -t 或 test 参数"))
+	fmt.Println("	" + u.Cyan("...") + "	" + u.White("可以使用所有 go 命令的参数"))
 	fmt.Println("")
 	fmt.Println("Samples:")
-	fmt.Println("	\033[36mgowatch -r\033[0m")
-	fmt.Println("	\033[36mgowatch -t\033[0m")
-	fmt.Println("	\033[36mgowatch -t -b\033[0m")
-	fmt.Println("	\033[36mgowatch -p ../ -t\033[0m")
-	fmt.Println("	\033[36mgowatch run start.go\033[0m")
-	fmt.Println("	\033[36mgowatch run samePackages start.go\033[0m")
-	fmt.Println("	\033[36mgowatch test\033[0m")
-	fmt.Println("	\033[36mgowatch test ./testcase\033[0m")
+	fmt.Println("	" + u.Cyan("gowatch -r"))
+	fmt.Println("	" + u.Cyan("gowatch -t"))
+	fmt.Println("	" + u.Cyan("gowatch -t -b"))
+	fmt.Println("	" + u.Cyan("gowatch -p ../ -t"))
+	fmt.Println("	" + u.Cyan("gowatch run start.go"))
+	fmt.Println("	" + u.Cyan("gowatch run samePackages start.go"))
+	fmt.Println("	" + u.Cyan("gowatch test"))
+	fmt.Println("	" + u.Cyan("gowatch test ./testcase"))
 	fmt.Println("")
 }
 
@@ -196,7 +196,7 @@ func runCommand(command string, args ...string) {
 			//if strings.Index(line, "go/src") != -1 {
 			//	fmt.Println(line)
 			//} else {
-			//	fmt.Println("\033[36m", line, "\033[0m")
+			//	fmt.Println(u.Cyan(line))
 			//}
 		} else if strings.HasPrefix(line, "	") {
 			fmt.Println(line)
