@@ -63,3 +63,34 @@ gowatch [-p paths] [-t] [-b] [...]
 	gomod -u
 	gomod -u v1.2.1
 ```
+
+# sskey
+
+生成RES密文的工具。
+
+可以通过生成go语言代码来混淆RES的key与iv的值，让其不可分析。
+
+# Usage
+```shell
+    sskey
+        -l              List all saved keys
+        -c keyName      Create a new key and save it
+        -t keyName      Test key
+        -e [keyName] data       Encrypt data by specified key or default key
+        -d [keyName] data       Decrypt data by specified key or default key
+        -o keyName      Output golang code
+        -db keyName     db configure Output golang code
+        -redis keyName  redis configure Output golang code
+        
+    Samples:
+        sskey -l
+        sskey -c aaa
+        sskey -t aaa
+        sskey -e 123456
+        sskey -d vcg9B/GX3Tqf1EWfpfDeMw==
+        sskey -e aaa 123456
+        sskey -d aaa gAx9Wq7YN85WKSFj7kBcHg==
+        sskey -o aaa
+        sskey -db aaa
+        sskey -redis aaa    
+```

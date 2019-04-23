@@ -21,7 +21,7 @@ func main() {
 	os.Mkdir(keyPath, 0700)
 
 	op := os.Args[1]
-	if (op == "-c" || op == "-t" || op == "-o") && len(os.Args) < 3 {
+	if (op == "-c" || op == "-t" || op == "-o" || op == "-db" || op == "-redis") && len(os.Args) < 3 {
 		keyName := scanLine(u.Cyan("Please enter key name: "))
 		if keyName == "" {
 			printUsage()
@@ -130,7 +130,6 @@ func main() {
 			fmt.Println()
 			fmt.Println(u.Green("Decrypt test Succeed"))
 		}
-
 	case "-d":
 		var key, iv []byte
 		var s string
@@ -146,74 +145,93 @@ func main() {
 		}
 		s2 := u.DecryptAes(s, key, iv)
 		fmt.Println("Decrypted: ", u.Yellow(s2))
-
 	case "-o":
-		key, iv := loadKey(keyPath + os.Args[2])
-		keyOffsets := make([]int, 40)
-		ivOffsets := make([]int, 40)
-		for i := 0; i < 40; i++ {
-			keyOffsets[i] = u.GlobalRand1.Intn(127)
-			ivOffsets[i] = u.GlobalRand2.Intn(127)
-			if key[i] > 127 {
-				keyOffsets[i] *= -1
-			}
-			if iv[i] > 127 {
-				ivOffsets[i] *= -1
-			}
-			key[i] = byte(int(key[i]) + keyOffsets[i])
-			iv[i] = byte(int(iv[i]) + ivOffsets[i])
-		}
-		fmt.Println("package main")
-		fmt.Println()
-		fmt.Println("import (")
-		fmt.Println("	\"fmt\"")
-		fmt.Println("	\"github.com/ssgo/u\"")
-		fmt.Println("	\"os\"")
-		fmt.Println(")")
-		fmt.Println()
-		fmt.Println("func main() {")
-		fmt.Println("	key := make([]byte, 0)")
-		fmt.Println("	iv := make([]byte, 0)")
-		fmt.Println()
-		for j := 0; j < 4; j++ {
-			fmt.Print("	key = append(key")
-			for i := 0; i < 10; i++ {
-				fmt.Print(", ", key[j*10+i])
-			}
-			fmt.Println(")")
-		}
-		fmt.Println()
-		for j := 0; j < 4; j++ {
-			fmt.Print("	iv = append(iv")
-			for i := 0; i < 10; i++ {
-				fmt.Print(", ", iv[j*10+i])
-			}
-			fmt.Println(")")
-		}
-		fmt.Println()
-		for i := 39; i >= 0; i-- {
-			iv[39] = byte(int(iv[39]) - 29)
-			fmt.Print("	key[", i, "] = byte(int(key[", i, "]) - ", keyOffsets[i], ")\n")
-			fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
-		}
-		fmt.Println()
-
-		fmt.Println("	if len(os.Args) < 2 {")
-		fmt.Println("		fmt.Println(\"need data\")")
-		fmt.Println("		return")
-		fmt.Println("	}")
-
-		fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
-		fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
-		fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
-		fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
-
-		fmt.Println("}")
-
+		makeGoCode(keyPath, "redis")
+	case "-db":
+		makeGoCode(keyPath, "db")
+	case "-redis":
+		makeGoCode(keyPath, "redis")
 	default:
 		printUsage()
 	}
 	fmt.Println()
+}
+
+func makeGoCode(keyPath string, dataType string) {
+	key, iv := loadKey(keyPath + os.Args[2])
+	keyOffsets := make([]int, 40)
+	ivOffsets := make([]int, 40)
+	for i := 0; i < 40; i++ {
+		keyOffsets[i] = u.GlobalRand1.Intn(127)
+		ivOffsets[i] = u.GlobalRand2.Intn(127)
+		if key[i] > 127 {
+			keyOffsets[i] *= -1
+		}
+		if iv[i] > 127 {
+			ivOffsets[i] *= -1
+		}
+		key[i] = byte(int(key[i]) + keyOffsets[i])
+		iv[i] = byte(int(iv[i]) + ivOffsets[i])
+	}
+	fmt.Println("package main")
+	fmt.Println()
+	fmt.Println("import (")
+	fmt.Println("	\"fmt\"")
+	fmt.Println("	\"github.com/ssgo/u\"")
+	if dataType == "redis" {
+		fmt.Println("	\"github.com/ssgo/redis\"")
+	} else if dataType == "db" {
+		fmt.Println("	\"github.com/ssgo/db\"")
+	} else {
+		fmt.Println("	\"github.com/ssgo/db\"")
+	}
+	fmt.Println("	\"os\"")
+	fmt.Println(")")
+	fmt.Println()
+	fmt.Println("func main() {")
+	fmt.Println("	key := make([]byte, 0)")
+	fmt.Println("	iv := make([]byte, 0)")
+	fmt.Println()
+	for j := 0; j < 4; j++ {
+		fmt.Print("	key = append(key")
+		for i := 0; i < 10; i++ {
+			fmt.Print(", ", key[j*10+i])
+		}
+		fmt.Println(")")
+	}
+	fmt.Println()
+	for j := 0; j < 4; j++ {
+		fmt.Print("	iv = append(iv")
+		for i := 0; i < 10; i++ {
+			fmt.Print(", ", iv[j*10+i])
+		}
+		fmt.Println(")")
+	}
+	fmt.Println()
+	for i := 39; i >= 0; i-- {
+		iv[39] = byte(int(iv[39]) - 29)
+		fmt.Print("	key[", i, "] = byte(int(key[", i, "]) - ", keyOffsets[i], ")\n")
+		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
+	}
+	fmt.Println()
+
+	fmt.Println("	if len(os.Args) < 2 {")
+	fmt.Println("		fmt.Println(\"need data\")")
+	fmt.Println("		return")
+	fmt.Println("	}")
+	if dataType == "redis" {
+		fmt.Println("	redis.SetEncryptKeys(key[2:], iv[5:])")
+	} else if dataType == "db" {
+		fmt.Println("	db.SetEncryptKeys(key[2:], iv[5:])")
+	} else {
+		fmt.Println("	db.SetEncryptKeys(key[2:], iv[5:])")
+	}
+	//fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
+	//fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
+	//fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
+	//fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
+
+	fmt.Println("}")
 }
 
 func scanLine(hint string) string {
@@ -278,6 +296,8 @@ func printUsage() {
 	fmt.Println(u.Cyan("	-e [keyName] data	") + u.White("Encrypt data by specified key or default key"))
 	fmt.Println(u.Cyan("	-d [keyName] data	") + u.White("Decrypt data by specified key or default key"))
 	fmt.Println(u.Cyan("	-o keyName	") + u.White("Output golang code"))
+	fmt.Println(u.Cyan("	-db keyName	") + u.White("db configure Output golang code"))
+	fmt.Println(u.Cyan("	-redis keyName	") + u.White("redis configure Output golang code"))
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println(u.Cyan("	sskey -l"))
@@ -288,5 +308,7 @@ func printUsage() {
 	fmt.Println(u.Cyan("	sskey -e aaa 123456"))
 	fmt.Println(u.Cyan("	sskey -d aaa gAx9Wq7YN85WKSFj7kBcHg=="))
 	fmt.Println(u.Cyan("	sskey -o aaa"))
+	fmt.Println(u.Cyan("	sskey -db aaa"))
+	fmt.Println(u.Cyan("	sskey -redis aaa"))
 	fmt.Println("")
 }
