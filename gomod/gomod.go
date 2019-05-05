@@ -61,6 +61,15 @@ func main() {
 			}
 		}
 	case "-u":
+		commit := ""
+		if len(os.Args) > 3 {
+			commit = os.Args[3]
+		}
+
+		if commit != "" {
+			_ = printCommand("git", "commit", "-a", "-m", commit)
+			_ = printCommand("git", "push")
+		}
 		oldVer := "v0.0.0"
 		outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
 		for i := len(outs) - 1; i >= 0; i-- {
@@ -185,14 +194,14 @@ func main() {
 
 	default:
 		if len(os.Args) > 1 {
-			if os.Args[1] == "tidy" {
-				_ = os.Remove("go.sum")
-			}
 			args := []string{"mod"}
 			args = append(args, os.Args[1:]...)
 			outs, _ := runCommand("go", args...)
 			for _, line := range outs {
 				fmt.Println(line)
+			}
+			if os.Args[1] == "tidy" {
+				_ = os.Remove("go.sum")
 			}
 		} else {
 			printUsage()

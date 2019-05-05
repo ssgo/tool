@@ -180,33 +180,51 @@ func runCommand(command string, args ...string) {
 
 	cmd.Start()
 	reader := bufio.NewReader(io.MultiReader(stdout, stderr))
+	//reader1 := bufio.NewReader(stdout)
+	//reader2 := bufio.NewReader(stderr)
 	for {
-		lineBuf, _, err2 := reader.ReadLine()
-
-		if err2 != nil || io.EOF == err2 {
+		lineBuf, _, err := reader.ReadLine()
+		if err != nil || io.EOF == err{
 			break
 		}
-		line := strings.TrimRight(string(lineBuf), "\r\n")
-		if strings.HasPrefix(line, "ok ") {
-			fmt.Println(u.BGreen(line))
-		} else if strings.HasPrefix(line, "FAIL	") {
-			fmt.Println(u.BRed(line))
-		} else if strings.Index(line, ".go:") != -1 {
-			fmt.Println(line)
-			//if strings.Index(line, "go/src") != -1 {
-			//	fmt.Println(line)
-			//} else {
-			//	fmt.Println(u.Cyan(line))
-			//}
-		} else if strings.HasPrefix(line, "	") {
-			fmt.Println(line)
-		} else {
-			fmt.Println(line)
-		}
+		outputLine(string(lineBuf))
+
+		//lineBuf1, _, err1 := reader1.ReadLine()
+		//lineBuf2, _, err2 := reader2.ReadLine()
+		//fmt.Println("##1", string(lineBuf1), err1)
+		//fmt.Println("##2", string(lineBuf2), err2)
+		//if err1 != nil || io.EOF == err1 || err2 != nil || io.EOF == err2 {
+		//	break
+		//}
+		//outputLine(string(lineBuf1))
+		//outputLine(string(lineBuf2))
 	}
 
 	cmd.Wait()
 	lastCmd = nil
+}
+
+func outputLine(line string) {
+	line = strings.TrimRight(line, "\r\n")
+	if line == "" {
+		return
+	}
+	if strings.HasPrefix(line, "ok ") {
+		fmt.Println(u.BGreen(line))
+	} else if strings.HasPrefix(line, "FAIL	") {
+		fmt.Println(u.BRed(line))
+	} else if strings.Index(line, ".go:") != -1 {
+		fmt.Println(line)
+		//if strings.Index(line, "go/src") != -1 {
+		//	fmt.Println(line)
+		//} else {
+		//	fmt.Println(u.Cyan(line))
+		//}
+	} else if strings.HasPrefix(line, "	") {
+		fmt.Println(line)
+	} else {
+		fmt.Println(line)
+	}
 }
 
 func stop() {

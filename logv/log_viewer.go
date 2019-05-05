@@ -13,7 +13,7 @@ import (
 	"syscall"
 )
 
-var useJson bool
+//var useJson bool
 var showFullTime bool
 
 func main() {
@@ -24,8 +24,8 @@ func main() {
 		case "--help":
 			printUsage()
 			return
-		case "-j":
-			useJson = true
+		//case "-j":
+		//	useJson = true
 		case "-f":
 			showFullTime = true
 		default:
@@ -42,7 +42,7 @@ func main() {
 	go func() {
 		<-c
 		if fd != nil {
-			fd.Close()
+			_ = fd.Close()
 		}
 		//os.Exit(0)
 	}()
@@ -83,21 +83,37 @@ func output(line string) {
 		fmt.Println(line)
 		return
 	}
-	showTime := b.LogTime.Format(u.StringIf(showFullTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
-	switch b.LogLevel {
-	case "debug":
-		showTime = u.Dim(showTime)
-	case "info":
-		showTime = showTime
-	case "warning":
-		showTime = u.BYellow(showTime)
-	case "error":
-		showTime = u.BRed(showTime)
+	logTime := log.MakeTime(b.LogTime)
+	showTime := logTime.Format(u.StringIf(showFullTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
+	t1 := strings.Split(showTime, " ")
+	d := t1[0]
+	t := ""
+	if len(t1) > 1 {
+		t = t1[1]
 	}
-	fmt.Print(showTime)
+	t2 := strings.Split(t, ".")
+	s := ""
+	if len(t2) > 1 {
+		s = t2[1]
+	}
+	t = t2[0]
+	fmt.Print(u.Dim(d), " ")
+	if b.Extra["debug"] != nil {
+		fmt.Print(u.Dim(t))
+	} else if b.Extra["warning"] != nil {
+		fmt.Print(u.BYellow(t))
+	} else if b.Extra["error"] != nil {
+		fmt.Print(u.BRed(t))
+	}else{
+		fmt.Print(t)
+	}
+	if s != "" {
+		fmt.Print(u.Dim("."+s))
+	}
+	fmt.Print(" ", u.White(b.TraceId, u.AttrDim, u.AttrUnderline))
 
 	if b.LogType == standard.LogTypeRequest {
-		r := log.RequestLog{}
+		r := standard.RequestLog{}
 		if log.ParseSpecialLog(b, &r) == nil {
 			if r.ResponseCode <= 0 || (r.ResponseCode >= 400 && r.ResponseCode <= 599) {
 				fmt.Print(" ", u.BRed(u.String(r.ResponseCode)), " ", u.Red(u.String(r.UsedTime)))
@@ -132,22 +148,28 @@ func output(line string) {
 			}
 		}
 	} else {
-		fmt.Print(" ", u.White(u.StringIf(b.LogType == "undefined", "-", b.LogType), u.AttrBold))
-
-		levelMessage := b.Extra[b.LogLevel]
-		if levelMessage != nil {
-			delete(b.Extra, b.LogLevel)
-			switch b.LogLevel {
-			case "debug":
-				fmt.Print("  ", u.Dim(levelMessage))
-			case "info":
-				fmt.Print("  ", levelMessage)
-			case "warning":
-				fmt.Print("  ", u.Yellow(levelMessage))
-			case "error":
-				fmt.Print("  ", u.Red(levelMessage))
-			}
+		if b.Extra["debug"] != nil {
+			fmt.Print("  ", u.Dim(b.Extra["debug"]))
+			delete(b.Extra, "debug")
+		} else if b.Extra["info"] != nil {
+			fmt.Print("  ", b.Extra["info"])
+			delete(b.Extra, "info")
+		} else if b.Extra["warning"] != nil {
+			fmt.Print("  ", u.Yellow(b.Extra["warning"]))
+			delete(b.Extra, "warning")
+		} else if b.Extra["error"] != nil {
+			fmt.Print("  ", u.Red(b.Extra["error"]))
+			delete(b.Extra, "error")
+		} else if b.LogType == "undefined" {
+			fmt.Print(" ", u.Dim("-"))
+		} else {
+			fmt.Print(" ", u.Cyan(b.LogType, u.AttrBold))
 		}
+	}
+
+	callStacks := b.Extra["callStacks"]
+	if callStacks != nil {
+		delete(b.Extra, "callStacks")
 	}
 
 	if b.Extra != nil {
@@ -156,18 +178,22 @@ func output(line string) {
 		}
 	}
 
-	if b.Traces != "" {
-		traces := strings.Split(b.Traces, "; ")
+	if showFullTime && callStacks != nil {
+		callStacksList, ok := callStacks.([]interface{})
+		stackColor := u.TextWhite
+		if b.LogType == "warning" {
+			stackColor = u.TextYellow
+		} else if b.LogType == "error" || strings.Index(b.LogType, "Error") != -1 {
+			stackColor = u.TextRed
+		}
+
 		fmt.Print(" ")
-		for _, v := range traces {
-			switch b.LogLevel {
-			case "error":
-				fmt.Print(" ", u.Red(v, u.AttrDim, u.AttrItalic))
-			case "warning":
-				fmt.Print(" ", u.Yellow(v, u.AttrDim, u.AttrItalic))
-			default:
-				fmt.Print(" ", u.White(v, u.AttrDim, u.AttrItalic))
+		if ok {
+			for _, v := range callStacksList {
+				fmt.Print(" ", u.Color(v, stackColor, u.BgNone, u.AttrDim, u.AttrItalic))
 			}
+		} else {
+			fmt.Print(" ", u.Color(u.String(callStacks), stackColor, u.BgNone, u.AttrDim, u.AttrItalic))
 		}
 	}
 	fmt.Println()
