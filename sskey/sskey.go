@@ -146,18 +146,18 @@ func main() {
 		s2 := u.DecryptAes(s, key, iv)
 		fmt.Println("Decrypted: ", u.Yellow(s2))
 	case "-o":
-		makeGoCode(keyPath, "redis")
+		makeGoCode(keyPath, "redis", false)
 	case "-db":
-		makeGoCode(keyPath, "db")
+		makeGoCode(keyPath, "db", true)
 	case "-redis":
-		makeGoCode(keyPath, "redis")
+		makeGoCode(keyPath, "redis", true)
 	default:
 		printUsage()
 	}
 	fmt.Println()
 }
 
-func makeGoCode(keyPath string, dataType string) {
+func makeGoCode(keyPath string, dataType string, forApp bool) {
 	key, iv := loadKey(keyPath + os.Args[2])
 	keyOffsets := make([]int, 40)
 	ivOffsets := make([]int, 40)
@@ -188,7 +188,11 @@ func makeGoCode(keyPath string, dataType string) {
 	fmt.Println("	\"os\"")
 	fmt.Println(")")
 	fmt.Println()
-	fmt.Println("func main() {")
+	if forApp {
+		fmt.Println("func init() {")
+	} else {
+		fmt.Println("func main() {")
+	}
 	fmt.Println("	key := make([]byte, 0)")
 	fmt.Println("	iv := make([]byte, 0)")
 	fmt.Println()
@@ -214,11 +218,12 @@ func makeGoCode(keyPath string, dataType string) {
 		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
 	}
 	fmt.Println()
-
-	fmt.Println("	if len(os.Args) < 2 {")
-	fmt.Println("		fmt.Println(\"need data\")")
-	fmt.Println("		return")
-	fmt.Println("	}")
+	if !forApp {
+		fmt.Println("	if len(os.Args) < 2 {")
+		fmt.Println("		fmt.Println(\"need data\")")
+		fmt.Println("		return")
+		fmt.Println("	}")
+	}
 	if dataType == "redis" {
 		fmt.Println("	redis.SetEncryptKeys(key[2:], iv[5:])")
 	} else if dataType == "db" {
