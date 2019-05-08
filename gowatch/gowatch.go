@@ -26,6 +26,7 @@ func main() {
 	basePaths := make([]string, 0)
 	cmd := "go"
 	cmdArgs := make([]string, 0)
+	var runArgs []string
 	for i := 1; i < len(os.Args); i++ {
 		switch os.Args[i] {
 		case "help":
@@ -50,6 +51,7 @@ func main() {
 			}
 		case "-r":
 			cmdArgs = append(cmdArgs, "run")
+			runArgs = make([]string, 0)
 			files, err := ioutil.ReadDir("./")
 			if err == nil {
 				for _, file := range files {
@@ -69,7 +71,11 @@ func main() {
 		case "-b":
 			cmdArgs = append(cmdArgs, "-bench", ".*")
 		default:
-			cmdArgs = append(cmdArgs, os.Args[i])
+			if runArgs == nil {
+				cmdArgs = append(cmdArgs, os.Args[i])
+			} else {
+				runArgs = append(runArgs, os.Args[i])
+			}
 		}
 	}
 
@@ -113,7 +119,7 @@ func main() {
 	for {
 		select {
 		case <-changed:
-			os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
+			_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
 			fmt.Printf("[Watching "+u.Cyan("%s")+" [Running "+u.Cyan("%s %s")+"\n\n", strings.Join(basePaths, " "), cmd, strings.Join(cmdArgs, " "))
 
 			runPos := -1
@@ -124,13 +130,13 @@ func main() {
 				}
 			}
 
-			if runPos >= 0 {
+			if runPos >= 0 && runArgs != nil {
 				buildArgs := append([]string{}, cmdArgs[0:runPos]...)
 				buildArgs = append(buildArgs, "build", "-o", ".run")
 				buildArgs = append(buildArgs, cmdArgs[runPos+1:]...)
 				fmt.Printf("Building "+u.Cyan("%s %s")+"\n", cmd, strings.Join(buildArgs, " "))
 				runCommand(cmd, buildArgs...)
-				runCommand("./.run")
+				runCommand("./.run", runArgs...)
 			} else {
 				runCommand(cmd, cmdArgs...)
 			}
@@ -178,13 +184,13 @@ func runCommand(command string, args ...string) {
 		return
 	}
 
-	cmd.Start()
+	_ = cmd.Start()
 	reader := bufio.NewReader(io.MultiReader(stdout, stderr))
 	//reader1 := bufio.NewReader(stdout)
 	//reader2 := bufio.NewReader(stderr)
 	for {
 		lineBuf, _, err := reader.ReadLine()
-		if err != nil || io.EOF == err{
+		if err != nil || io.EOF == err {
 			break
 		}
 		outputLine(string(lineBuf))
@@ -200,7 +206,7 @@ func runCommand(command string, args ...string) {
 		//outputLine(string(lineBuf2))
 	}
 
-	cmd.Wait()
+	_ = cmd.Wait()
 	lastCmd = nil
 }
 
@@ -231,16 +237,16 @@ func stop() {
 	if lastCmd != nil {
 		fmt.Println("killing ", lastCmd.Process.Pid)
 		if runtime.GOOS == "windows" {
-			lastCmd.Process.Kill()
+			_ = lastCmd.Process.Kill()
 		} else {
-			lastCmd.Process.Signal(syscall.SIGTERM)
+			_ = lastCmd.Process.Signal(syscall.SIGTERM)
 		}
-		lastCmd.Process.Wait()
+		_, _ = lastCmd.Process.Wait()
 		//syscall.Kill(-lastCmd.Process.Pid, syscall.SIGKILL)
 	}
 	_, err := os.Stat(".run")
 	if err == nil || os.IsExist(err) {
-		os.Remove(".run")
+		_ = os.Remove(".run")
 	}
 }
 

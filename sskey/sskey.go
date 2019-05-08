@@ -18,7 +18,7 @@ func main() {
 
 	homeDir, _ := os.UserHomeDir()
 	keyPath := fmt.Sprintf("%s%csskeys%c", homeDir, os.PathSeparator, os.PathSeparator)
-	os.Mkdir(keyPath, 0700)
+	_ = os.Mkdir(keyPath, 0700)
 
 	op := os.Args[1]
 	if (op == "-c" || op == "-t" || op == "-o" || op == "-db" || op == "-redis") && len(os.Args) < 3 {
@@ -31,14 +31,16 @@ func main() {
 		os.Args = append(os.Args, keyName)
 	}
 
-	if (op == "-e" || op == "-d") && len(os.Args) < 3 {
-		data := scanLine(u.Cyan("Please enter data: "))
-		if data == "" {
-			printUsage()
-			fmt.Println(u.Red("need data"))
-			return
+	if op == "-e" || op == "-d" {
+		if len(os.Args) < 3 || (len(os.Args) == 3 && u.FileExists(keyPath + os.Args[2])){
+			data := scanLine(u.Cyan("Please enter data: "))
+			if data == "" {
+				printUsage()
+				fmt.Println(u.Red("need data"))
+				return
+			}
+			os.Args = append(os.Args, data)
 		}
-		os.Args = append(os.Args, data)
 	}
 
 	switch op {
@@ -80,8 +82,8 @@ func main() {
 			buf[40+i] = byte(u.GlobalRand2.Intn(255))
 		}
 		buf[80] = 217
-		fd.WriteString(base64.StdEncoding.EncodeToString(buf))
-		fd.Close()
+		_, _ = fd.WriteString(base64.StdEncoding.EncodeToString(buf))
+		_ = fd.Close()
 
 		key, iv := loadKey(keyPath + os.Args[2])
 		s1 := u.EncryptAes("Hello World!", key[2:], iv[5:])
@@ -146,18 +148,18 @@ func main() {
 		s2 := u.DecryptAes(s, key, iv)
 		fmt.Println("Decrypted: ", u.Yellow(s2))
 	case "-o":
-		makeGoCode(keyPath, "redis", false)
+		makeGoCode(keyPath, "")
 	case "-db":
-		makeGoCode(keyPath, "db", true)
+		makeGoCode(keyPath, "db")
 	case "-redis":
-		makeGoCode(keyPath, "redis", true)
+		makeGoCode(keyPath, "redis")
 	default:
 		printUsage()
 	}
 	fmt.Println()
 }
 
-func makeGoCode(keyPath string, dataType string, forApp bool) {
+func makeGoCode(keyPath string, dataType string) {
 	key, iv := loadKey(keyPath + os.Args[2])
 	keyOffsets := make([]int, 40)
 	ivOffsets := make([]int, 40)
@@ -176,21 +178,20 @@ func makeGoCode(keyPath string, dataType string, forApp bool) {
 	fmt.Println("package main")
 	fmt.Println()
 	fmt.Println("import (")
-	fmt.Println("	\"fmt\"")
-	fmt.Println("	\"github.com/ssgo/u\"")
 	if dataType == "redis" {
 		fmt.Println("	\"github.com/ssgo/redis\"")
 	} else if dataType == "db" {
 		fmt.Println("	\"github.com/ssgo/db\"")
 	} else {
-		fmt.Println("	\"github.com/ssgo/db\"")
+		fmt.Println("	\"fmt\"")
+		fmt.Println("	\"os\"")
+		fmt.Println("	\"github.com/ssgo/u\"")
 	}
-	fmt.Println("	\"os\"")
 	fmt.Println(")")
 	fmt.Println()
-	if forApp {
+	if dataType == "redis" || dataType == "db" {
 		fmt.Println("func init() {")
-	} else {
+	}else{
 		fmt.Println("func main() {")
 	}
 	fmt.Println("	key := make([]byte, 0)")
@@ -218,23 +219,21 @@ func makeGoCode(keyPath string, dataType string, forApp bool) {
 		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
 	}
 	fmt.Println()
-	if !forApp {
-		fmt.Println("	if len(os.Args) < 2 {")
-		fmt.Println("		fmt.Println(\"need data\")")
-		fmt.Println("		return")
-		fmt.Println("	}")
-	}
+
 	if dataType == "redis" {
 		fmt.Println("	redis.SetEncryptKeys(key[2:], iv[5:])")
 	} else if dataType == "db" {
 		fmt.Println("	db.SetEncryptKeys(key[2:], iv[5:])")
 	} else {
-		fmt.Println("	db.SetEncryptKeys(key[2:], iv[5:])")
+		fmt.Println("	if len(os.Args) < 2 {")
+		fmt.Println("		fmt.Println(\"need data\")")
+		fmt.Println("		return")
+		fmt.Println("	}")
+		fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
+		fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
+		fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
+		fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
 	}
-	//fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
-	//fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
-	//fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
-	//fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
 
 	fmt.Println("}")
 }
@@ -272,7 +271,7 @@ func loadKey(keyFile string) ([]byte, []byte) {
 		fmt.Println(u.Red(err.Error()))
 		os.Exit(0)
 	}
-	fd.Close()
+	_ = fd.Close()
 
 	buf := make([]byte, 100)
 	n, err := base64.StdEncoding.Decode(buf, readBuf[0:readSize])

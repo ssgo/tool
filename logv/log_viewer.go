@@ -180,20 +180,14 @@ func output(line string) {
 
 	if showFullTime && callStacks != nil {
 		callStacksList, ok := callStacks.([]interface{})
-		stackColor := u.TextWhite
-		if b.LogType == "warning" {
-			stackColor = u.TextYellow
-		} else if b.LogType == "error" || strings.Index(b.LogType, "Error") != -1 {
-			stackColor = u.TextRed
-		}
 
 		fmt.Print(" ")
 		if ok {
 			for _, v := range callStacksList {
-				fmt.Print(" ", u.Color(v, stackColor, u.BgNone, u.AttrDim, u.AttrItalic))
+				fmt.Print(" ", u.Magenta(v, u.AttrItalic))
 			}
 		} else {
-			fmt.Print(" ", u.Color(u.String(callStacks), stackColor, u.BgNone, u.AttrDim, u.AttrItalic))
+			fmt.Print(" ", u.Magenta(u.String(callStacks), u.AttrItalic))
 		}
 	}
 	fmt.Println()
