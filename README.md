@@ -66,9 +66,9 @@ gowatch [-p paths] [-t] [-b] [...]
 
 # sskey
 
-生成RES密文的工具。
+生成AES密文的工具。
 
-可以通过生成go语言代码来混淆RES的key与iv的值，让其不可分析。
+可以通过生成go语言代码来混淆AES的key与iv的值，让其不可分析。
 
 # Usage
 ```shell
