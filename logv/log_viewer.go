@@ -104,48 +104,47 @@ func output(line string) {
 		fmt.Print(u.BYellow(t))
 	} else if b.Extra["error"] != nil {
 		fmt.Print(u.BRed(t))
-	}else{
+	} else {
 		fmt.Print(t)
 	}
 	if s != "" {
-		fmt.Print(u.Dim("."+s))
+		fmt.Print(u.Dim("." + s))
 	}
 	fmt.Print(" ", u.White(b.TraceId, u.AttrDim, u.AttrUnderline))
 
 	if b.LogType == standard.LogTypeRequest {
 		r := standard.RequestLog{}
-		if log.ParseSpecialLog(b, &r) == nil {
-			if r.ResponseCode <= 0 || (r.ResponseCode >= 400 && r.ResponseCode <= 599) {
-				fmt.Print(" ", u.BRed(u.String(r.ResponseCode)), " ", u.Red(u.String(r.UsedTime)))
-			} else {
-				fmt.Print(" ", u.BGreen(u.String(r.ResponseCode)), " ", u.Green(u.String(r.UsedTime)))
-			}
+		log.ParseSpecialLog(b, &r)
+		if r.ResponseCode <= 0 || (r.ResponseCode >= 400 && r.ResponseCode <= 599) {
+			fmt.Print(" ", u.BRed(u.String(r.ResponseCode)), " ", u.Red(u.String(r.UsedTime)))
+		} else {
+			fmt.Print(" ", u.BGreen(u.String(r.ResponseCode)), " ", u.Green(u.String(r.UsedTime)))
+		}
 
-			fmt.Print("  ", u.Cyan(r.ClientIp), u.Dim("("), r.FromApp, u.Dim(":"), r.FromNode, u.Dim(")"), u.Dim(" => "), u.Cyan(r.App), u.Dim(":"), r.AuthLevel, u.Dim(":"), r.Priority, u.Dim("@"), r.Node)
-			fmt.Print("  ", r.RequestId, u.Dim(":"), r.ClientId, u.Dim(":"), r.SessionId)
-			fmt.Print("  ", r.Host, " ", r.Scheme, " ", r.Proto, " ", r.Method, " ", u.Cyan(r.Path))
-			if r.RequestData != nil {
-				for k, v := range r.RequestData {
-					fmt.Print("  ", u.Magenta(k, u.AttrItalic), u.Dim(":"), u.String(v))
+		fmt.Print("  ", u.Cyan(r.ClientIp), u.Dim("("), r.FromApp, u.Dim(":"), r.FromNode, u.Dim(")"), u.Dim(" => "), u.Cyan(r.App), u.Dim(":"), r.AuthLevel, u.Dim(":"), r.Priority, u.Dim("@"), r.Node)
+		fmt.Print("  ", r.RequestId, u.Dim(":"), r.ClientId, u.Dim(":"), r.SessionId)
+		fmt.Print("  ", r.Host, " ", r.Scheme, " ", r.Proto, " ", r.Method, " ", u.Cyan(r.Path))
+		if r.RequestData != nil {
+			for k, v := range r.RequestData {
+				fmt.Print("  ", u.Magenta(k, u.AttrItalic), u.Dim(":"), u.String(v))
+			}
+		}
+		if showFullTime {
+			if r.RequestHeaders != nil {
+				for k, v := range r.RequestHeaders {
+					fmt.Print("  ", u.Magenta(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
 				}
 			}
-			if showFullTime {
-				if r.RequestHeaders != nil {
-					for k, v := range r.RequestHeaders {
-						fmt.Print("  ", u.Magenta(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
-					}
-				}
-			}
+		}
 
-			fmt.Print("  ", u.BWhite(u.String(r.ResponseDataLength)))
-			if showFullTime {
-				if r.ResponseHeaders != nil {
-					for k, v := range r.ResponseHeaders {
-						fmt.Print("  ", u.Blue(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
-					}
+		fmt.Print("  ", u.BWhite(u.String(r.ResponseDataLength)))
+		if showFullTime {
+			if r.ResponseHeaders != nil {
+				for k, v := range r.ResponseHeaders {
+					fmt.Print("  ", u.Blue(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
 				}
-				fmt.Print("  ", u.String(r.ResponseData))
 			}
+			fmt.Print("  ", u.String(r.ResponseData))
 		}
 	} else {
 		if b.Extra["debug"] != nil {
