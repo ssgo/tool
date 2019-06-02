@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/ssgo/httpclient"
+	"github.com/ssgo/log"
 	"github.com/ssgo/u"
 	"io"
 	"io/ioutil"
@@ -10,6 +12,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -105,17 +108,14 @@ func main() {
 
 		fmt.Println("Done")
 
-	case "-c", "-cf", "-fc":
+	case "-c", "-cf":
+		cachePath := fmt.Sprintf("%s%cgomodCache%c", os.TempDir(), os.PathSeparator, os.PathSeparator)
+		_ = os.Mkdir(cachePath, 0755)
+
 		force := len(os.Args[1]) > 2 || (len(os.Args) > 2 && os.Args[2] == "-f")
-		goPathLines, _ := runCommand("go", "env", "GOPATH")
-		goPath := "~/go/"
-		if len(goPathLines) > 0 {
-			goPath = goPathLines[0] + "/"
-		}
-		err := os.MkdirAll(goPath+"gomod/checks", 0755)
-		if err != nil {
-			fmt.Println(err)
-			return
+		if force {
+			fmt.Println("cache path: ", cachePath)
+			_ = os.RemoveAll(cachePath)
 		}
 
 		mods := map[string]string{}
@@ -126,6 +126,9 @@ func main() {
 			if line == "require (" {
 				modReadState = 1
 				continue
+			} else if strings.HasPrefix(line, "require ") {
+				modReadState = 1
+				line = line[8:]
 			}
 			if modReadState == 1 {
 				if line == ")" {
@@ -135,58 +138,130 @@ func main() {
 				if len(kv) != 2 {
 					continue
 				}
-				if strings.Index(kv[0], "golang.org") != -1 {
+				if strings.Index(kv[0], "github.com/") == -1 {
 					continue
 				}
-				mods[kv[0]] = kv[1]
+				mods[strings.Replace(kv[0], "github.com/", "", 1)] = kv[1]
 			}
 		}
 
 		lastMods := map[string]string{}
 		maxModLen := 0
+		hc := httpclient.GetClient(10 * time.Second)
 		for mod := range mods {
-			_ = os.Chdir(goPath + "gomod/checks")
-
-			if len(mod) > maxModLen {
-				maxModLen = len(mod)
-			}
-			modPaths := strings.Split(mod, "/")
-			modName := modPaths[len(modPaths)-1]
-
-			if force {
-				err = os.RemoveAll(modName + ".git")
+			cacheFile := cachePath + strings.Replace(mod, "/", "_", 20)
+			fs, err := os.Stat(cacheFile)
+			isOk := false
+			if fs != nil && err == nil && fs.ModTime().Unix() >= time.Now().Add(-300 * time.Second).Unix() {
+				ver := ""
+				err := u.Load(cacheFile, &ver)
 				if err != nil {
-					fmt.Println(err)
+					log.DefaultLogger.Error(err.Error())
+				} else {
+					lastMods[mod] = ver
+					isOk = true
 				}
 			}
 
-			if fileExists(modName + ".git") {
-				_ = os.Chdir(modName + ".git")
-			} else {
-				fmt.Println(u.Cyan("cloning " + mod))
-				err = printCommand("git", "clone", "--bare", "https://"+mod)
+			if !isOk {
+				r := make([]struct{ Name string }, 0)
+				fmt.Println("fetching: https://api.github.com/repos/" + mod + "/tags?per_page=1")
+				err := hc.Get("https://api.github.com/repos/" + mod + "/tags?per_page=1").To(&r)
 				if err != nil {
-					fmt.Println(err)
+					log.DefaultLogger.Error(err.Error())
+					return
 				}
-				_ = os.Chdir(modName + ".git")
-			}
-
-			lastVer := ""
-			outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
-			for i := len(outs) - 1; i >= 0; i-- {
-				if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
-					lastVer = outs[len(outs)-1]
-					break
+				if err == nil && len(r) > 0 && r[0].Name != "" {
+					lastMods[mod] = r[0].Name
+					err = u.Save(cacheFile, r[0].Name)
+					if err != nil {
+						log.DefaultLogger.Error(err.Error())
+					}
 				}
 			}
-
-			lastMods[mod] = lastVer
 		}
+
+		//force := len(os.Args[1]) > 2 || (len(os.Args) > 2 && os.Args[2] == "-f")
+		//goPathLines, _ := runCommand("go", "env", "GOPATH")
+		//goPath := "~/go/"
+		//if len(goPathLines) > 0 {
+		//	goPath = goPathLines[0] + "/"
+		//}
+		//err := os.MkdirAll(goPath+"gomod/checks", 0755)
+		//if err != nil {
+		//	fmt.Println(err)
+		//	return
+		//}
+		//
+		//mods := map[string]string{}
+		//modLines, _ := readFile("go.mod")
+		//modReadState := 0
+		//for _, line := range modLines {
+		//	line = strings.TrimSpace(line)
+		//	if line == "require (" {
+		//		modReadState = 1
+		//		continue
+		//	}
+		//	if modReadState == 1 {
+		//		if line == ")" {
+		//			break
+		//		}
+		//		kv := strings.Split(line, " ")
+		//		if len(kv) != 2 {
+		//			continue
+		//		}
+		//		if strings.Index(kv[0], "golang.org") != -1 {
+		//			continue
+		//		}
+		//		mods[kv[0]] = kv[1]
+		//	}
+		//}
+		//
+		//lastMods := map[string]string{}
+		//maxModLen := 0
+		//for mod := range mods {
+		//	_ = os.Chdir(goPath + "gomod/checks")
+		//
+		//	if len(mod) > maxModLen {
+		//		maxModLen = len(mod)
+		//	}
+		//	modPaths := strings.Split(mod, "/")
+		//	modName := modPaths[len(modPaths)-1]
+		//
+		//	if force {
+		//		err = os.RemoveAll(modName + ".git")
+		//		if err != nil {
+		//			fmt.Println(err)
+		//		}
+		//	}
+		//
+		//	if fileExists(modName + ".git") {
+		//		_ = os.Chdir(modName + ".git")
+		//	} else {
+		//		fmt.Println(u.Cyan("cloning " + mod))
+		//		err = printCommand("git", "clone", "--bare", "https://"+mod)
+		//		if err != nil {
+		//			fmt.Println(err)
+		//		}
+		//		_ = os.Chdir(modName + ".git")
+		//	}
+		//
+		//	lastVer := ""
+		//	outs, _ := runCommand("git", "tag", "-l", "v*", "--sort=taggerdate")
+		//	for i := len(outs) - 1; i >= 0; i-- {
+		//		if outs[i][0] == 'v' && strings.IndexByte(outs[i], '.') != -1 {
+		//			lastVer = outs[len(outs)-1]
+		//			break
+		//		}
+		//	}
+		//
+		//	lastMods[mod] = lastVer
+		//}
 
 		for mod, ver := range mods {
 			lastVer := lastMods[mod]
 			if lastVer == ver {
-				fmt.Printf(fmt.Sprint("%-", maxModLen+1, "s %s\n"), mod, u.BGreen(ver))
+				fmt.Printf(fmt.Sprint("%-", maxModLen+1, "s %s => %s\n"), mod, u.BGreen(ver), u.Green(lastVer))
 			} else {
 				fmt.Printf(fmt.Sprint("%-", maxModLen+1, "s %s => %s\n"), mod, u.BRed(ver), u.Green(lastVer))
 			}

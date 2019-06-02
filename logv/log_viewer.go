@@ -62,7 +62,7 @@ func main() {
 	for {
 		line, err := inputReader.ReadString('\n')
 		//fmt.Println("[",line,"]")
-		line = strings.TrimSpace(line)
+		line = strings.TrimRight(line, "\r\n")
 		output(line)
 		if err != nil {
 			if err != io.EOF {

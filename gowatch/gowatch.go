@@ -267,6 +267,11 @@ func watchFiles() bool {
 }
 
 func watchPath(path string) {
+	allType := false
+	if strings.HasSuffix(path, "*") {
+		allType = true
+		path = path[0 : len(path)-2]
+	}
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return
@@ -280,7 +285,7 @@ func watchPath(path string) {
 		if file.IsDir() {
 			watchPath(path + file.Name() + "/")
 		} else {
-			if !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") {
+			if !allType && !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") && !strings.HasSuffix(fileName, ".yml") {
 				continue
 			}
 			//l := len(fileBytes)
