@@ -32,7 +32,7 @@ func main() {
 	}
 
 	if op == "-e" || op == "-d" {
-		if len(os.Args) < 3 || (len(os.Args) == 3 && u.FileExists(keyPath + os.Args[2])){
+		if len(os.Args) < 3 || (len(os.Args) == 3 && u.FileExists(keyPath+os.Args[2])) {
 			data := scanLine(u.Cyan("Please enter data: "))
 			if data == "" {
 				printUsage()
@@ -123,6 +123,7 @@ func main() {
 		}
 		s1 := u.EncryptAes(s, key, iv)
 		s2 := u.DecryptAes(s1, key, iv)
+
 		fmt.Println("Encrypted: ", u.Yellow(s1))
 		if s2 != s {
 			fmt.Println(u.Red("Test Failed"))
@@ -147,19 +148,23 @@ func main() {
 		}
 		s2 := u.DecryptAes(s, key, iv)
 		fmt.Println("Decrypted: ", u.Yellow(s2))
-	case "-o":
-		makeGoCode(keyPath, "")
-	case "-db":
-		makeGoCode(keyPath, "db")
-	case "-redis":
-		makeGoCode(keyPath, "redis")
+	case "-php":
+		makePHPCode(keyPath)
+	case "-java":
+		makeJavaCode(keyPath)
+	case "-go":
+		makeGoCode(keyPath)
 	default:
 		printUsage()
 	}
 	fmt.Println()
 }
 
-func makeGoCode(keyPath string, dataType string) {
+func makeGoCode(keyPath string) {
+	lenArgs := len(os.Args)
+	if lenArgs < 3 {
+		fmt.Println("please enter your sskey file!")
+	}
 	key, iv := loadKey(keyPath + os.Args[2])
 	keyOffsets := make([]int, 40)
 	ivOffsets := make([]int, 40)
@@ -177,23 +182,8 @@ func makeGoCode(keyPath string, dataType string) {
 	}
 	fmt.Println("package main")
 	fmt.Println()
-	fmt.Println("import (")
-	if dataType == "redis" {
-		fmt.Println("	\"github.com/ssgo/redis\"")
-	} else if dataType == "db" {
-		fmt.Println("	\"github.com/ssgo/db\"")
-	} else {
-		fmt.Println("	\"fmt\"")
-		fmt.Println("	\"os\"")
-		fmt.Println("	\"github.com/ssgo/u\"")
-	}
-	fmt.Println(")")
-	fmt.Println()
-	if dataType == "redis" || dataType == "db" {
-		fmt.Println("func init() {")
-	}else{
-		fmt.Println("func main() {")
-	}
+
+	fmt.Println("func init() {")
 	fmt.Println("	key := make([]byte, 0)")
 	fmt.Println("	iv := make([]byte, 0)")
 	fmt.Println()
@@ -219,22 +209,142 @@ func makeGoCode(keyPath string, dataType string) {
 		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
 	}
 	fmt.Println()
+	fmt.Println("	SetSSKey(key[2:], iv[5:])")
 
-	if dataType == "redis" {
-		fmt.Println("	redis.SetEncryptKeys(key[2:], iv[5:])")
-	} else if dataType == "db" {
-		fmt.Println("	db.SetEncryptKeys(key[2:], iv[5:])")
-	} else {
-		fmt.Println("	if len(os.Args) < 2 {")
-		fmt.Println("		fmt.Println(\"need data\")")
-		fmt.Println("		return")
-		fmt.Println("	}")
-		fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
-		fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
-		fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
-		fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
+	fmt.Println("}")
+}
+
+func makePHPCode(keyPath string) {
+	lenArgs := len(os.Args)
+	if lenArgs < 3 {
+		fmt.Println("please enter your sskey file!")
 	}
+	key, iv := loadKey(keyPath + os.Args[2])
+	keyOffsets := make([]int, 40)
+	ivOffsets := make([]int, 40)
+	for i := 0; i < 40; i++ {
+		keyOffsets[i] = u.GlobalRand1.Intn(127)
+		ivOffsets[i] = u.GlobalRand2.Intn(127)
+		if key[i] > 127 {
+			keyOffsets[i] *= -1
+		}
+		if iv[i] > 127 {
+			ivOffsets[i] *= -1
+		}
+		key[i] = byte(int(key[i]) + keyOffsets[i])
+		iv[i] = byte(int(iv[i]) + ivOffsets[i])
+	}
+	fmt.Println("<?php")
+	fmt.Println()
+	fmt.Println("$setAesKeyIv = function () {")
 
+	fmt.Println("	if(!function_exists('set_sskey')) {return;}")
+	fmt.Println("	$key = [];")
+	fmt.Println("	$iv = [];")
+	fmt.Println()
+	for j := 0; j < 4; j++ {
+		fmt.Print("	array_push($key")
+		for i := 0; i < 10; i++ {
+			fmt.Print(", ", key[j*10+i])
+		}
+		fmt.Println(");")
+	}
+	fmt.Println()
+	for j := 0; j < 4; j++ {
+		fmt.Print("	array_push($iv")
+		for i := 0; i < 10; i++ {
+			fmt.Print(", ", iv[j*10+i])
+		}
+		fmt.Println(");")
+	}
+	fmt.Println()
+	for i := 39; i >= 0; i-- {
+		iv[39] = byte(int(iv[39]) - 29)
+		fmt.Println("	$key[", i, "] = $key[", i, "] - ", keyOffsets[i], ";")
+		fmt.Println("	$iv[", i, "] = $iv[", i, "] - ", ivOffsets[i], ";")
+	}
+	fmt.Println()
+	fmt.Println("	array_slice($key, 2);")
+	fmt.Println("	array_slice($iv, 5);")
+	fmt.Println("	set_sskey($key, $iv);")
+	fmt.Println("};")
+	fmt.Println("$setAesKeyIv();")
+	fmt.Println("unset($setAesKeyIv);")
+}
+
+func makeJavaCode(keyPath string) {
+	lenArgs := len(os.Args)
+	if lenArgs < 3 {
+		fmt.Println("please enter your sskey file!")
+	}
+	key, iv := loadKey(keyPath + os.Args[2])
+	keyOffsets := make([]int, 40)
+	ivOffsets := make([]int, 40)
+	for i := 0; i < 40; i++ {
+		keyOffsets[i] = u.GlobalRand1.Intn(127)
+		ivOffsets[i] = u.GlobalRand2.Intn(127)
+		if key[i] > 127 {
+			keyOffsets[i] *= -1
+		}
+		if iv[i] > 127 {
+			ivOffsets[i] *= -1
+		}
+		key[i] = byte(int(key[i]) + keyOffsets[i])
+		iv[i] = byte(int(iv[i]) + ivOffsets[i])
+	}
+	fmt.Println("import java.lang.reflect.InvocationTargetException;")
+	fmt.Println("import java.lang.reflect.Method;")
+	fmt.Println("import java.util.Arrays;")
+	fmt.Println()
+	fmt.Println("public class SSKeyStarter {")
+	fmt.Println("    private static final SSKeyStarter instance = new SSKeyStarter();")
+	fmt.Println("    private SSKeyStarter() {")
+
+	fmt.Println("        int[] key = {")
+
+	for j := 0; j < 4; j++ {
+		fmt.Print("                ")
+		for i := 0; i < 10; i++ {
+			fmt.Print(key[j*10+i], ", ")
+		}
+		fmt.Println()
+	}
+	fmt.Println("        };")
+	fmt.Println()
+	fmt.Println("        int[] iv = {")
+	for j := 0; j < 4; j++ {
+		fmt.Print("                ")
+		for i := 0; i < 10; i++ {
+			fmt.Print(iv[j*10+i], ", ")
+		}
+		fmt.Println()
+	}
+	fmt.Println("        };")
+	fmt.Println()
+	for i := 39; i >= 0; i-- {
+		iv[39] = byte(int(iv[39]) - 29)
+		fmt.Println("        key[", i, "] = key[", i, "] - ", keyOffsets[i], ";")
+		fmt.Println("        iv[", i, "] = iv[", i, "] - ", ivOffsets[i], ";")
+	}
+	fmt.Println()
+	fmt.Println("        key = Arrays.copyOfRange(key, 2, key.length);")
+	fmt.Println("        iv = Arrays.copyOfRange(iv, 5, iv.length);")
+	fmt.Println("        try{")
+	fmt.Println("            Class c = Class.forName(\"SSKeySetter\");")
+	fmt.Println("            Method m = c.getMethod(\"set\", key.getClass(),iv.getClass());")
+	fmt.Println("            m.invoke(c.newInstance(), new Object[]{key, iv});")
+	fmt.Println("        } catch (ClassNotFoundException e) {")
+	fmt.Println("            e.printStackTrace();")
+	fmt.Println("        } catch (NoSuchMethodException e) {")
+	fmt.Println("            e.printStackTrace();")
+	fmt.Println("        } catch (IllegalAccessException e) {")
+	fmt.Println("            e.printStackTrace();")
+	fmt.Println("        } catch (InvocationTargetException e) {")
+	fmt.Println("            e.printStackTrace();")
+	fmt.Println("        } catch (Exception e) {")
+	fmt.Println("            e.printStackTrace();")
+	fmt.Println("        }")
+	fmt.Println("    }")
 	fmt.Println("}")
 }
 
@@ -299,9 +409,9 @@ func printUsage() {
 	fmt.Println(u.Cyan("	-t keyName	") + u.White("Test key"))
 	fmt.Println(u.Cyan("	-e [keyName] data	") + u.White("Encrypt data by specified key or default key"))
 	fmt.Println(u.Cyan("	-d [keyName] data	") + u.White("Decrypt data by specified key or default key"))
-	fmt.Println(u.Cyan("	-o keyName	") + u.White("Output golang code"))
-	fmt.Println(u.Cyan("	-db keyName	") + u.White("db configure Output golang code"))
-	fmt.Println(u.Cyan("	-redis keyName	") + u.White("redis configure Output golang code"))
+	fmt.Println(u.Cyan("	-php keyName	") + u.White("Output php code"))
+	fmt.Println(u.Cyan("	-java keyName	") + u.White("Output java code"))
+	fmt.Println(u.Cyan("	-go keyName	") + u.White("Output go code"))
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println(u.Cyan("	sskey -l"))
@@ -314,5 +424,8 @@ func printUsage() {
 	fmt.Println(u.Cyan("	sskey -o aaa"))
 	fmt.Println(u.Cyan("	sskey -db aaa"))
 	fmt.Println(u.Cyan("	sskey -redis aaa"))
+	fmt.Println(u.Cyan("	sskey -php aaa"))
+	fmt.Println(u.Cyan("	sskey -java aaa"))
+	fmt.Println(u.Cyan("	sskey -go aaa"))
 	fmt.Println("")
 }
