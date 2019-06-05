@@ -209,7 +209,7 @@ func makeGoCode(keyPath string) {
 		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
 	}
 	fmt.Println()
-	fmt.Println("	SetSSKey(key[2:], iv[5:])")
+	fmt.Println("	setSSKey(key[2:], iv[5:])")
 
 	fmt.Println("}")
 }
@@ -236,7 +236,7 @@ func makePHPCode(keyPath string) {
 	}
 	fmt.Println("<?php")
 	fmt.Println()
-	fmt.Println("$setAesKeyIv = function () {")
+	fmt.Println("$sskeyStarer = function () {")
 
 	fmt.Println("	if(!function_exists('set_sskey')) {return;}")
 	fmt.Println("	$key = [];")
@@ -264,12 +264,12 @@ func makePHPCode(keyPath string) {
 		fmt.Println("	$iv[", i, "] = $iv[", i, "] - ", ivOffsets[i], ";")
 	}
 	fmt.Println()
-	fmt.Println("	array_slice($key, 2);")
-	fmt.Println("	array_slice($iv, 5);")
+	fmt.Println("	$key = array_slice($key, 2);")
+	fmt.Println("	$iv = array_slice($iv, 5);")
 	fmt.Println("	set_sskey($key, $iv);")
 	fmt.Println("};")
-	fmt.Println("$setAesKeyIv();")
-	fmt.Println("unset($setAesKeyIv);")
+	fmt.Println("$sskeyStarer();")
+	fmt.Println("unset($sskeyStarer);")
 }
 
 func makeJavaCode(keyPath string) {
@@ -402,6 +402,7 @@ func loadKey(keyFile string) ([]byte, []byte) {
 }
 
 func printUsage() {
+	fmt.Println("Wellcome to use sskey.")
 	fmt.Println("Usage:")
 	fmt.Println("	sskey")
 	fmt.Println(u.Cyan("	-l		") + u.White("List all saved keys"))

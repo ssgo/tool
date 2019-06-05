@@ -78,9 +78,9 @@ gowatch [-p paths] [-t] [-b] [...]
         -t keyName      Test key
         -e [keyName] data       Encrypt data by specified key or default key
         -d [keyName] data       Decrypt data by specified key or default key
-        -o keyName      Output golang code
-        -db keyName     db configure Output golang code
-        -redis keyName  redis configure Output golang code
+        -php keyName      Output php code
+        -java keyName     Output java code
+        -go keyName  Output go code
         
     Samples:
         sskey -l
@@ -88,9 +88,7 @@ gowatch [-p paths] [-t] [-b] [...]
         sskey -t aaa
         sskey -e 123456
         sskey -d vcg9B/GX3Tqf1EWfpfDeMw==
-        sskey -e aaa 123456
-        sskey -d aaa gAx9Wq7YN85WKSFj7kBcHg==
-        sskey -o aaa
-        sskey -db aaa
-        sskey -redis aaa    
+        sskey -php aaa
+        sskey -java aaa
+        sskey -go aaa    
 ```
