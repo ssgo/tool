@@ -153,14 +153,16 @@ func main() {
 	case "-java":
 		makeJavaCode(keyPath)
 	case "-go":
-		makeGoCode(keyPath)
+		makeGoCode(keyPath, "project")
+	case "-o":
+		makeGoCode(keyPath, "ops")
 	default:
 		printUsage()
 	}
 	fmt.Println()
 }
 
-func makeGoCode(keyPath string) {
+func makeGoCode(keyPath string, usedType string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
 		fmt.Println("please enter your sskey file!")
@@ -182,8 +184,17 @@ func makeGoCode(keyPath string) {
 	}
 	fmt.Println("package main")
 	fmt.Println()
+	if usedType == "ops" {
+		fmt.Println("import (")
+		fmt.Println("	\"fmt\"")
+		fmt.Println("	\"os\"")
+		fmt.Println("	\"github.com/ssgo/u\"")
+		fmt.Println(")")
+		fmt.Println("func main() {")
+	} else {
+		fmt.Println("func init() {")
+	}
 
-	fmt.Println("func init() {")
 	fmt.Println("	key := make([]byte, 0)")
 	fmt.Println("	iv := make([]byte, 0)")
 	fmt.Println()
@@ -209,7 +220,19 @@ func makeGoCode(keyPath string) {
 		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
 	}
 	fmt.Println()
-	fmt.Println("	setSSKey(key[2:], iv[5:])")
+
+	if usedType == "ops" {
+		fmt.Println("	if len(os.Args) < 2 {")
+		fmt.Println("		fmt.Println(\"need data\")")
+		fmt.Println("		return")
+		fmt.Println("	}")
+		fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
+		fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
+		fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
+		fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
+	} else {
+		fmt.Println("	setSSKey(key[2:], iv[5:])")
+	}
 
 	fmt.Println("}")
 }
@@ -413,6 +436,7 @@ func printUsage() {
 	fmt.Println(u.Cyan("	-php keyName	") + u.White("Output php code"))
 	fmt.Println(u.Cyan("	-java keyName	") + u.White("Output java code"))
 	fmt.Println(u.Cyan("	-go keyName	") + u.White("Output go code"))
+	fmt.Println(u.Cyan("	-o keyName	") + u.White("Encrypt tool(make executable file)"))
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println(u.Cyan("	sskey -l"))
@@ -428,5 +452,6 @@ func printUsage() {
 	fmt.Println(u.Cyan("	sskey -php aaa"))
 	fmt.Println(u.Cyan("	sskey -java aaa"))
 	fmt.Println(u.Cyan("	sskey -go aaa"))
+	fmt.Println(u.Cyan("	sskey -o aaa"))
 	fmt.Println("")
 }
