@@ -78,10 +78,10 @@ gowatch [-p paths] [-t] [-b] [...]
         -t keyName      Test key
         -e [keyName] data       Encrypt data by specified key or default key
         -d [keyName] data       Decrypt data by specified key or default key
-        -php keyName      Output php code
-        -java keyName     Output java code
-        -go keyName  Output go code
-        
+        -php keyName        Output php code
+        -java keyName       Output java code
+        -go keyName         Output go code
+        -o keyName          Encrypt tool(make executable file)
     Samples:
         sskey -l
         sskey -c aaa
@@ -90,5 +90,6 @@ gowatch [-p paths] [-t] [-b] [...]
         sskey -d vcg9B/GX3Tqf1EWfpfDeMw==
         sskey -php aaa
         sskey -java aaa
-        sskey -go aaa    
+        sskey -go aaa
+        sskey -o aaa    
 ```
