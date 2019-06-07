@@ -166,6 +166,7 @@ func makeGoCode(keyPath string, usedType string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
 		fmt.Println("please enter your sskey file!")
+		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
 	keyOffsets := make([]int, 40)
@@ -241,6 +242,7 @@ func makePHPCode(keyPath string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
 		fmt.Println("please enter your sskey file!")
+		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
 	keyOffsets := make([]int, 40)
@@ -299,6 +301,7 @@ func makeJavaCode(keyPath string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
 		fmt.Println("please enter your sskey file!")
+		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
 	keyOffsets := make([]int, 40)
