@@ -43,6 +43,9 @@ func main() {
 		}
 	}
 
+	defaultKey := []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
+	defaultIv := []byte("VFs7@sK61cj^f?HZ")
+
 	switch op {
 	case "-l":
 		files, err := ioutil.ReadDir(keyPath)
@@ -117,8 +120,8 @@ func main() {
 			iv = iv[5:]
 			s = os.Args[3]
 		} else {
-			key = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
-			iv = []byte("VFs7@sK61cj^f?HZ")
+			key = defaultKey
+			iv = defaultIv
 			s = os.Args[2]
 		}
 		s1 := u.EncryptAes(s, key, iv)
@@ -142,8 +145,8 @@ func main() {
 			iv = iv[5:]
 			s = os.Args[3]
 		} else {
-			key = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
-			iv = []byte("VFs7@sK61cj^f?HZ")
+			key = defaultKey
+			iv = defaultIv
 			s = os.Args[2]
 		}
 		s2 := u.DecryptAes(s, key, iv)
@@ -155,7 +158,7 @@ func main() {
 	case "-go":
 		makeGoCode(keyPath, "project")
 	case "-o":
-		makeGoCode(keyPath, "ops")
+		makeGoCode(keyPath, "encryptor")
 	default:
 		printUsage()
 	}
@@ -165,7 +168,7 @@ func main() {
 func makeGoCode(keyPath string, usedType string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
-		fmt.Println("please enter your sskey file!")
+		fmt.Println("please enter your key name!")
 		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
@@ -185,7 +188,7 @@ func makeGoCode(keyPath string, usedType string) {
 	}
 	fmt.Println("package main")
 	fmt.Println()
-	if usedType == "ops" {
+	if usedType == "encryptor" {
 		fmt.Println("import (")
 		fmt.Println("	\"fmt\"")
 		fmt.Println("	\"os\"")
@@ -222,7 +225,7 @@ func makeGoCode(keyPath string, usedType string) {
 	}
 	fmt.Println()
 
-	if usedType == "ops" {
+	if usedType == "encryptor" {
 		fmt.Println("	if len(os.Args) < 2 {")
 		fmt.Println("		fmt.Println(\"need data\")")
 		fmt.Println("		return")
@@ -241,7 +244,7 @@ func makeGoCode(keyPath string, usedType string) {
 func makePHPCode(keyPath string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
-		fmt.Println("please enter your sskey file!")
+		fmt.Println("please enter your key name!")
 		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
@@ -300,7 +303,7 @@ func makePHPCode(keyPath string) {
 func makeJavaCode(keyPath string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
-		fmt.Println("please enter your sskey file!")
+		fmt.Println("please enter your key name!")
 		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
