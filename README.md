@@ -94,4 +94,4 @@ gowatch [-p paths] [-t] [-b] [...]
         sskey -o aaa    
 ```
 
-具体可以查看：[sskey详细使用手册](sskey.md)
+具体可以查看：[sskey详细使用手册](sskey/sskey.md)
