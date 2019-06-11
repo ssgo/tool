@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
+	"github.com/ssgo/tool/sskey/sskeylib"
 	"github.com/ssgo/u"
 	"io/ioutil"
 	"os"
@@ -60,7 +61,7 @@ func main() {
 				continue
 			}
 			n++
-			fmt.Println(u.Cyan(fileName), "	", u.White(keyPath+" "+fileName))
+			fmt.Println(u.Cyan(fileName), "	", u.White(keyPath+fileName))
 		}
 		fmt.Println(n, "Keys")
 	case "-c":
@@ -152,229 +153,32 @@ func main() {
 		s2 := u.DecryptAes(s, key, iv)
 		fmt.Println("Decrypted: ", u.Yellow(s2))
 	case "-php":
-		makePHPCode(keyPath)
+		makeCode("php", keyPath)
 	case "-java":
-		makeJavaCode(keyPath)
+		makeCode("java", keyPath)
 	case "-go":
-		makeGoCode(keyPath, "project")
+		makeCode("go", keyPath)
 	case "-o":
-		makeGoCode(keyPath, "encryptor")
+		makeCode("encryptor", keyPath)
 	default:
 		printUsage()
 	}
 	fmt.Println()
 }
 
-func makeGoCode(keyPath string, usedType string) {
+func makeCode(codeName string, keyPath string) {
 	lenArgs := len(os.Args)
 	if lenArgs < 3 {
 		fmt.Println("please enter your key name!")
 		return
 	}
 	key, iv := loadKey(keyPath + os.Args[2])
-	keyOffsets := make([]int, 40)
-	ivOffsets := make([]int, 40)
-	for i := 0; i < 40; i++ {
-		keyOffsets[i] = u.GlobalRand1.Intn(127)
-		ivOffsets[i] = u.GlobalRand2.Intn(127)
-		if key[i] > 127 {
-			keyOffsets[i] *= -1
-		}
-		if iv[i] > 127 {
-			ivOffsets[i] *= -1
-		}
-		key[i] = byte(int(key[i]) + keyOffsets[i])
-		iv[i] = byte(int(iv[i]) + ivOffsets[i])
-	}
-	fmt.Println("package main")
-	fmt.Println()
-	if usedType == "encryptor" {
-		fmt.Println("import (")
-		fmt.Println("	\"fmt\"")
-		fmt.Println("	\"os\"")
-		fmt.Println("	\"github.com/ssgo/u\"")
-		fmt.Println(")")
-		fmt.Println("func main() {")
-	} else {
-		fmt.Println("func init() {")
-	}
-
-	fmt.Println("	key := make([]byte, 0)")
-	fmt.Println("	iv := make([]byte, 0)")
-	fmt.Println()
-	for j := 0; j < 4; j++ {
-		fmt.Print("	key = append(key")
-		for i := 0; i < 10; i++ {
-			fmt.Print(", ", key[j*10+i])
-		}
-		fmt.Println(")")
-	}
-	fmt.Println()
-	for j := 0; j < 4; j++ {
-		fmt.Print("	iv = append(iv")
-		for i := 0; i < 10; i++ {
-			fmt.Print(", ", iv[j*10+i])
-		}
-		fmt.Println(")")
-	}
-	fmt.Println()
-	for i := 39; i >= 0; i-- {
-		iv[39] = byte(int(iv[39]) - 29)
-		fmt.Print("	key[", i, "] = byte(int(key[", i, "]) - ", keyOffsets[i], ")\n")
-		fmt.Print("	iv[", i, "] = byte(int(iv[", i, "]) - ", ivOffsets[i], ")\n")
-	}
-	fmt.Println()
-
-	if usedType == "encryptor" {
-		fmt.Println("	if len(os.Args) < 2 {")
-		fmt.Println("		fmt.Println(\"need data\")")
-		fmt.Println("		return")
-		fmt.Println("	}")
-		fmt.Println("	s1 := u.EncryptAes(os.Args[1], key[2:], iv[5:])")
-		fmt.Println("	s2 := u.DecryptAes(s1, key[2:], iv[5:])")
-		fmt.Println("	fmt.Println(\"Encrypted: \", s1)")
-		fmt.Println("	fmt.Println(\"Decrypted check ok? \", s2 == os.Args[1])")
-	} else {
-		fmt.Println("	setSSKey(key[2:], iv[5:])")
-	}
-
-	fmt.Println("}")
-}
-
-func makePHPCode(keyPath string) {
-	lenArgs := len(os.Args)
-	if lenArgs < 3 {
-		fmt.Println("please enter your key name!")
+	codeDetail, err := sskeylib.MakeCode(codeName, key, iv)
+	if err != nil {
+		fmt.Println(err.Error())
 		return
 	}
-	key, iv := loadKey(keyPath + os.Args[2])
-	keyOffsets := make([]int, 40)
-	ivOffsets := make([]int, 40)
-	for i := 0; i < 40; i++ {
-		keyOffsets[i] = u.GlobalRand1.Intn(127)
-		ivOffsets[i] = u.GlobalRand2.Intn(127)
-		if key[i] > 127 {
-			keyOffsets[i] *= -1
-		}
-		if iv[i] > 127 {
-			ivOffsets[i] *= -1
-		}
-		key[i] = byte(int(key[i]) + keyOffsets[i])
-		iv[i] = byte(int(iv[i]) + ivOffsets[i])
-	}
-	fmt.Println("<?php")
-	fmt.Println()
-	fmt.Println("$sskeyStarer = function () {")
-
-	fmt.Println("	if(!function_exists('set_sskey')) {return;}")
-	fmt.Println("	$key = [];")
-	fmt.Println("	$iv = [];")
-	fmt.Println()
-	for j := 0; j < 4; j++ {
-		fmt.Print("	array_push($key")
-		for i := 0; i < 10; i++ {
-			fmt.Print(", ", key[j*10+i])
-		}
-		fmt.Println(");")
-	}
-	fmt.Println()
-	for j := 0; j < 4; j++ {
-		fmt.Print("	array_push($iv")
-		for i := 0; i < 10; i++ {
-			fmt.Print(", ", iv[j*10+i])
-		}
-		fmt.Println(");")
-	}
-	fmt.Println()
-	for i := 39; i >= 0; i-- {
-		iv[39] = byte(int(iv[39]) - 29)
-		fmt.Println("	$key[", i, "] = $key[", i, "] - ", keyOffsets[i], ";")
-		fmt.Println("	$iv[", i, "] = $iv[", i, "] - ", ivOffsets[i], ";")
-	}
-	fmt.Println()
-	fmt.Println("	$key = array_slice($key, 2);")
-	fmt.Println("	$iv = array_slice($iv, 5);")
-	fmt.Println("	set_sskey($key, $iv);")
-	fmt.Println("};")
-	fmt.Println("$sskeyStarer();")
-	fmt.Println("unset($sskeyStarer);")
-}
-
-func makeJavaCode(keyPath string) {
-	lenArgs := len(os.Args)
-	if lenArgs < 3 {
-		fmt.Println("please enter your key name!")
-		return
-	}
-	key, iv := loadKey(keyPath + os.Args[2])
-	keyOffsets := make([]int, 40)
-	ivOffsets := make([]int, 40)
-	for i := 0; i < 40; i++ {
-		keyOffsets[i] = u.GlobalRand1.Intn(127)
-		ivOffsets[i] = u.GlobalRand2.Intn(127)
-		if key[i] > 127 {
-			keyOffsets[i] *= -1
-		}
-		if iv[i] > 127 {
-			ivOffsets[i] *= -1
-		}
-		key[i] = byte(int(key[i]) + keyOffsets[i])
-		iv[i] = byte(int(iv[i]) + ivOffsets[i])
-	}
-	fmt.Println("import java.lang.reflect.InvocationTargetException;")
-	fmt.Println("import java.lang.reflect.Method;")
-	fmt.Println("import java.util.Arrays;")
-	fmt.Println()
-	fmt.Println("public class SSKeyStarter {")
-	fmt.Println("    private static final SSKeyStarter instance = new SSKeyStarter();")
-	fmt.Println("    private SSKeyStarter() {")
-
-	fmt.Println("        int[] key = {")
-
-	for j := 0; j < 4; j++ {
-		fmt.Print("                ")
-		for i := 0; i < 10; i++ {
-			fmt.Print(key[j*10+i], ", ")
-		}
-		fmt.Println()
-	}
-	fmt.Println("        };")
-	fmt.Println()
-	fmt.Println("        int[] iv = {")
-	for j := 0; j < 4; j++ {
-		fmt.Print("                ")
-		for i := 0; i < 10; i++ {
-			fmt.Print(iv[j*10+i], ", ")
-		}
-		fmt.Println()
-	}
-	fmt.Println("        };")
-	fmt.Println()
-	for i := 39; i >= 0; i-- {
-		iv[39] = byte(int(iv[39]) - 29)
-		fmt.Println("        key[", i, "] = key[", i, "] - ", keyOffsets[i], ";")
-		fmt.Println("        iv[", i, "] = iv[", i, "] - ", ivOffsets[i], ";")
-	}
-	fmt.Println()
-	fmt.Println("        key = Arrays.copyOfRange(key, 2, key.length);")
-	fmt.Println("        iv = Arrays.copyOfRange(iv, 5, iv.length);")
-	fmt.Println("        try{")
-	fmt.Println("            Class c = Class.forName(\"SSKeySetter\");")
-	fmt.Println("            Method m = c.getMethod(\"set\", key.getClass(),iv.getClass());")
-	fmt.Println("            m.invoke(c.newInstance(), new Object[]{key, iv});")
-	fmt.Println("        } catch (ClassNotFoundException e) {")
-	fmt.Println("            e.printStackTrace();")
-	fmt.Println("        } catch (NoSuchMethodException e) {")
-	fmt.Println("            e.printStackTrace();")
-	fmt.Println("        } catch (IllegalAccessException e) {")
-	fmt.Println("            e.printStackTrace();")
-	fmt.Println("        } catch (InvocationTargetException e) {")
-	fmt.Println("            e.printStackTrace();")
-	fmt.Println("        } catch (Exception e) {")
-	fmt.Println("            e.printStackTrace();")
-	fmt.Println("        }")
-	fmt.Println("    }")
-	fmt.Println("}")
+	fmt.Println(codeDetail)
 }
 
 func scanLine(hint string) string {

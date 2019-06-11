@@ -100,11 +100,12 @@ unset($__sskeyStarer);
 
 var javaTpl = `
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public final class SSKeyStarter {
     private static boolean inited = false;
-    public static void Init() {
+    public static void init() {
         if (inited) return;
         inited = true;
 
@@ -129,7 +130,7 @@ public final class SSKeyStarter {
         try {
             Class c = Class.forName("SSKeySetter");
             Method m = c.getMethod("set", byte[].class, byte[].class);
-            m.invoke(null, new String(Arrays.copyOfRange(key, 2, key.length)).getBytes(), new String(Arrays.copyOfRange(iv, 5, iv.length)).getBytes());
+            m.invoke(null, new String(key).getBytes(StandardCharsets.ISO_8859_1), new String(iv).getBytes(StandardCharsets.ISO_8859_1));
         } catch (Exception e) {
             e.printStackTrace();
         }

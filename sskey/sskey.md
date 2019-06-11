@@ -47,15 +47,15 @@ iv = "VFs7@sK61cj^f?HZ"
 通过``sskey -l``可以查看本地秘钥列表:
 
 ```shell
-/root/sskey/shop
-/root/sskey/order
+/root/sskeys/shop
+/root/sskeys/order
 ```
 
 ### 创建
 
 使用 sskey -c user可以创建一个秘钥：
 
-``/root/sskey/user``
+``/root/sskeys/user``
 
 ### 加密
 
@@ -127,24 +127,21 @@ key与iv中，字符都是随机的，0-255范围内（对应二进制转为10�
 
 #### SSKeySetter.java（自定义实现）
 
-放在项目根目录，类固定为SSKeySetter，实现方法固定为public void set(int[] key, int[] iv)，方法实现由项目自定义秘钥设置
+放在项目根目录，类固定为SSKeySetter，实现方法固定为public void set(byte[] key, byte[] iv)，方法实现由项目自定义秘钥设置
 
 类似：
 
 ```java
-
-	public class SSKeySetter {
-	    public static boolean init = false;
-	    public void set(int[] key, int[] iv){
-	        if(init) {
-	            return;
-	        }
-			//Aes秘钥设置类似
-	        AesUtils.setKeys(key, iv);
-	        init = true;
-	    }
-	}
-
+public class SSKeySetter {
+    public static boolean inited = false;
+    public static void set(byte[] key, byte[] iv){
+        if(inited) {
+            return;
+        }
+        inited = true;
+        AesUtil.setKeys(key, iv);
+    }
+}
 ```
 
 #### Aes加解密类
@@ -154,33 +151,30 @@ Aes加解密使用："AES/CBC/PKCS5Padding"
 为了调用SSKeyStarter，其中需要包含类似：
 
 ```java
-	
-	static {
-        try{
-            Class c = Class.forName("SSKeyStarter");
-            if(c != null) {
-                c.newInstance();
-            }
-        }catch (Exception e) {}
-    }
+static {
+    try{
+        Class c = Class.forName("SSKeyStarter");
+        Method m = c.getMethod("init");
+        m.invoke(null);
+    }catch (Exception e) {
 
+    }
+}
 ```
 
-
-具体解密如下：
+具体解密类似：
 
 ```java
-	
-	String decrypt(final String encryptedStr){
+public static String decrypt(final String encryptedStr){
         if(encryptedStr == null){
             return null;
         }
         //密码
-        final SecretKeySpec keySpec = new SecretKeySpec(getStrBytes(key),"AES");
+        final SecretKeySpec keySpec = new SecretKeySpec(key,"AES");
         //初始化向量器
-        final IvParameterSpec ivParameterSpec = new IvParameterSpec(getStrBytes(iv));
+        final IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
         try {
-            Cipher encipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            Cipher encipher = Cipher.getInstance(TRANSFORM_CBC_PKCS5);
             //加密模式
             encipher.init(Cipher.DECRYPT_MODE, keySpec, ivParameterSpec);
             //先用BASE64解密
@@ -190,15 +184,12 @@ Aes加解密使用："AES/CBC/PKCS5Padding"
             //返回字符串
             return new String(originalBytes);
         } catch (Exception e) {
-            System.out.println(MessageFormat.format("基于CBC工作模式的AES解密失败,
-				encryptedStr:{0},KEY:{1}",encryptedStr,key));
+            System.out.println("基于CBC工作模式的AES解密失败");
             e.printStackTrace();
         }
         return null;
-    }
-
+}
 ```
-
 
 ### go
 
@@ -215,18 +206,17 @@ Aes加解密使用："AES/CBC/PKCS5Padding"
 类似：
 
 ```go
+package main
 
-	package main
-	
-	import (
-		"github.com/ssgo/redis"
-		"github.com/ssgo/db"
-	)
-	
-	func setSSKey(key []byte, iv []byte) {
-		redis.SetEncryptKeys(key,iv)
-		db.SetEncryptKeys(key, iv)
-	}
+import (
+    "github.com/ssgo/redis"
+    "github.com/ssgo/db"
+)
+
+func setSSKey(key []byte, iv []byte) {
+    redis.SetEncryptKeys(key,iv)
+    db.SetEncryptKeys(key, iv)
+}
 ```
 
 #### 加解密类
