@@ -2,14 +2,22 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/ssgo/httpclient"
 	"github.com/ssgo/tool/sskey/sskeylib"
 	"github.com/ssgo/u"
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 )
+
+var defaultKeyIv = []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tVVFs7@sK61cj^f?HZ")
+var defaultKey = defaultKeyIv[:32] //?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV
+var defaultIv = defaultKeyIv[32:]
 
 func main() {
 	if len(os.Args) == 1 {
@@ -43,9 +51,6 @@ func main() {
 			os.Args = append(os.Args, data)
 		}
 	}
-
-	defaultKey := []byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV")
-	defaultIv := []byte("VFs7@sK61cj^f?HZ")
 
 	switch op {
 	case "-l":
@@ -160,10 +165,57 @@ func main() {
 		makeCode("go", keyPath)
 	case "-o":
 		makeCode("encryptor", keyPath)
+	case "-sync":
+		syncSSKeys(keyPath)
 	default:
 		printUsage()
 	}
 	fmt.Println()
+}
+
+func syncSSKeys(keyPath string) {
+	lenArgs := len(os.Args)
+	if lenArgs < 3 {
+		fmt.Println("please enter your key name!")
+		return
+	}
+	if lenArgs < 4 {
+		fmt.Println("please enter your upload url!")
+		return
+	}
+	keyNames := strings.Split(os.Args[2], ",")
+	var encryptedKeys = map[string]string{}
+	var settedKey []byte
+	var settedIv []byte
+	//use sync key
+	var settedKeyIv = getKey(keyPath+"sync", true)
+	if bytes.Equal(settedKeyIv, defaultKeyIv) {
+		settedKey = defaultKey
+		settedIv = defaultIv
+	} else {
+		settedKey = settedKeyIv[2:40]
+		settedIv = settedKeyIv[45:]
+	}
+	for _, keyName := range keyNames {
+		keyName = strings.Trim(keyName, " ")
+		if len(keyName) < 1 {
+			fmt.Println("invalid key name")
+			return
+		}
+		encryptedKeys[keyName] = u.EncryptAes(string(getKey(keyPath+keyName, false)[:80]), settedKey, settedIv)
+	}
+	sendKeys := httpclient.GetClient(10*time.Second).Post(os.Args[3], encryptedKeys)
+	if sendKeys.Error != nil {
+		fmt.Println("Error ", sendKeys.Error)
+		return
+	}
+	if !u.Bool(sendKeys.String()) {
+		fmt.Println("sync keys failed")
+		return
+	}
+	fmt.Println("send keys detail:")
+	fmt.Println(encryptedKeys)
+	fmt.Println("send keys successfully")
 }
 
 func makeCode(codeName string, keyPath string) {
@@ -194,15 +246,21 @@ func scanLine(hint string) string {
 	return line
 }
 
-func loadKey(keyFile string) ([]byte, []byte) {
+func getKey(keyFile string, usedDefault bool) []byte {
 	fi, err := os.Stat(keyFile)
 	if err != nil || fi == nil {
+		if usedDefault {
+			return defaultKeyIv
+		}
 		fmt.Println(u.Red(keyFile))
 		os.Exit(0)
 	}
 
 	fd, err := os.OpenFile(keyFile, os.O_RDONLY, 0400)
 	if err != nil {
+		if usedDefault {
+			return defaultKeyIv
+		}
 		fmt.Println(u.Red("bad key file"))
 		fmt.Println(u.Red(err.Error()))
 		os.Exit(0)
@@ -230,7 +288,11 @@ func loadKey(keyFile string) ([]byte, []byte) {
 		fmt.Println(u.Red("bad check bit " + string(buf[80])))
 		os.Exit(0)
 	}
+	return buf
+}
 
+func loadKey(keyFile string) ([]byte, []byte) {
+	buf := getKey(keyFile, false)
 	return buf[0:40], buf[40:80]
 }
 
@@ -247,6 +309,7 @@ func printUsage() {
 	fmt.Println(u.Cyan("	-java keyName	") + u.White("Output java code"))
 	fmt.Println(u.Cyan("	-go keyName	") + u.White("Output go code"))
 	fmt.Println(u.Cyan("	-o keyName	") + u.White("Encrypt tool(make executable file)"))
+	fmt.Println(u.Cyan("	-sync keyNames	") + u.White("Synchronization of keys to another machine from url"))
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println(u.Cyan("	sskey -l"))
@@ -263,5 +326,6 @@ func printUsage() {
 	fmt.Println(u.Cyan("	sskey -java aaa"))
 	fmt.Println(u.Cyan("	sskey -go aaa"))
 	fmt.Println(u.Cyan("	sskey -o aaa"))
+	fmt.Println(u.Cyan("	sskey -sync aaa,bbb,ccc http://192.168.3.207/sskeys/token"))
 	fmt.Println("")
 }
