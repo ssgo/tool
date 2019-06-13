@@ -266,7 +266,7 @@ function set_sskey($key,$iv) {
 
 #### aes加解密类
 
-需要有setKeyIv($key, $iv)方法可有调用，由sskeySetter.php来调用
+自定义setKeyIv($key, $iv)方法可被调用，由sskeySetter.php来调用
 
 当项目中没有sskeyStarter.php,加密类setKeyIv($key, $iv)没有调用入口，使用默认秘钥
 

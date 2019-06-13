@@ -82,6 +82,7 @@ gowatch [-p paths] [-t] [-b] [...]
         -java keyName       Output java code
         -go keyName         Output go code
         -o keyName          Encrypt tool(make executable file)
+        -sync aaa,bbb,ccc http://192.168.3.207/sskeys/token
     Samples:
         sskey -l
         sskey -c aaa
@@ -91,7 +92,8 @@ gowatch [-p paths] [-t] [-b] [...]
         sskey -php aaa
         sskey -java aaa
         sskey -go aaa
-        sskey -o aaa    
+        sskey -o aaa
+        sskey -sync aaa,bbb,ccc http://192.168.3.207/sskeys/token    
 ```
 
 具体可以查看：[sskey详细使用手册](sskey/sskey.md)
