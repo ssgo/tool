@@ -209,7 +209,7 @@ func syncSSKeys(keyPath string) {
 		fmt.Println("Error ", sendKeys.Error)
 		return
 	}
-	if !u.Bool(sendKeys.String()) {
+	if sendKeys.String() != "true" {
 		fmt.Println("sync keys failed")
 		return
 	}
@@ -252,7 +252,7 @@ func getKey(keyFile string, usedDefault bool) []byte {
 		if usedDefault {
 			return defaultKeyIv
 		}
-		fmt.Println(u.Red(keyFile))
+		fmt.Println(u.Red(keyFile), u.Red("does not exists"))
 		os.Exit(0)
 	}
 
