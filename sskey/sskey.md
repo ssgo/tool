@@ -91,6 +91,16 @@ key与iv中，字符都是随机的，0-255范围内（对应二进制转为10�
 
 将这个文件进行编译即生成了以user为秘钥的加密器
 
+### 传递秘钥
+
+``sskey -sync aaa,bbb,ccc http://ip:port/sskeys/token ``
+
+将秘钥加密进行传递到远程机器，远程机器需要提供带token的api，来获取秘钥密文
+
+远程机器使用秘钥来完成远程机器的部署工作，要确保秘钥的使用安全性，可以结合ssgo/deploy来做自动化部署
+
+ttp://ip:port/sskeys/token为post形式
+
 ## SSKey流程
 
 如下图所示：
