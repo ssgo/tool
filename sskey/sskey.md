@@ -9,16 +9,16 @@ key的长度固定为32字节，iv的长度固定为16字节，使用base64 enco
 ```shell
 
     sskey
-        -l              		List all saved keys
+        -l              	    List all saved keys
         -c keyName      		Create a new key and save it
         -t keyName      		Test key
         -e [keyName] data       Encrypt data by specified key or default key
         -d [keyName] data       Decrypt data by specified key or default key
         -php keyName        	Output php code
-        -java keyName       Output java code
-        -go keyName         Output go code
-        -o keyName          Encrypt tool(make executable file)
-        -sync keyNames  Synchronization of keys to another machine from url
+        -java keyName           Output java code
+        -go keyName             Output go code
+        -o keyName              Encrypt tool(make executable file)
+        -sync keyNames          Synchronization of keys to another machine from url
     Samples:
         sskey -l
         sskey -c aaa
