@@ -18,6 +18,7 @@ key的长度固定为32字节，iv的长度固定为16字节，使用base64 enco
         -java keyName       Output java code
         -go keyName         Output go code
         -o keyName          Encrypt tool(make executable file)
+        -sync keyNames  Synchronization of keys to another machine from url
     Samples:
         sskey -l
         sskey -c aaa
@@ -28,6 +29,7 @@ key的长度固定为32字节，iv的长度固定为16字节，使用base64 enco
         sskey -java aaa
         sskey -go aaa
         sskey -o aaa
+        sskey -sync aaa,bbb,ccc http://192.168.3.207/sskeys/token
     
 ```
 
@@ -133,11 +135,11 @@ ttp://ip:port/sskeys/token为post形式
 
 #### SSKeyStarter.java（工具提供）
 
-由`sskey -java user`生成，提供key和iv给项目使用，由部署工具放入项目根目录
+由`sskey -java user`生成，提供key和iv给项目使用，由部署工具放入项目类的根目录(src/main/java)
 
 #### SSKeySetter.java（自定义实现）
 
-放在项目根目录，类固定为SSKeySetter，实现方法固定为public void set(byte[] key, byte[] iv)，方法实现由项目自定义秘钥设置
+放在项目类的根目录，类固定为SSKeySetter，实现方法固定为public void set(byte[] key, byte[] iv)，方法实现由项目自定义秘钥设置
 
 类似：
 
