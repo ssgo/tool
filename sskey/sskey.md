@@ -1,6 +1,6 @@
 # SSKEY
 
-基于AES的CBC模式与pkcs5UnPadding填充算法的一套加解密解决方案，内置多个秘钥(key+iv)管理功能。
+基于AES的CBC模式与pkcs5UnPadding填充算法的一套加解密解决方案，内置多个密钥(key+iv)管理功能。
 
 key的长度固定为32字节，iv的长度固定为16字节，使用base64 encode输出。
 
@@ -35,9 +35,9 @@ key的长度固定为32字节，iv的长度固定为16字节，使用base64 enco
 
 简单说明：
 
-### 默认秘钥
+### 默认密钥
 
-未指定秘钥时，默认秘钥为：
+未指定密钥时，默认密钥为：
 
 ```go
 key = "?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV"
@@ -46,7 +46,7 @@ iv = "VFs7@sK61cj^f?HZ"
 
 ### 列表
 
-通过``sskey -l``可以查看本地秘钥列表:
+通过``sskey -l``可以查看本地密钥列表:
 
 ```shell
 /root/sskeys/shop
@@ -55,23 +55,23 @@ iv = "VFs7@sK61cj^f?HZ"
 
 ### 创建
 
-使用 sskey -c user可以创建一个秘钥：
+使用 sskey -c user可以创建一个密钥：
 
 ``/root/sskeys/user``
 
 ### 加密
 
-使用```sskey -e user 123asdf```可以得到指定user为秘钥，密码为123asdf的密文。
+使用```sskey -e user 123asdf```可以得到指定user为密钥，密码为123asdf的密文。
 
-使用```sskey -e 123asdf```可以得到密码为123asdf，默认秘钥的密文。
+使用```sskey -e 123asdf```可以得到密码为123asdf，默认密钥的密文。
 
 ### 解密
 
-使用```sskey -d user 密文```可以得到以user为秘钥，指定密文解密后的密码。
+使用```sskey -d user 密文```可以得到以user为密钥，指定密文解密后的密码。
 
-使用```sskey -d 密文```可以得到指定密文，默认秘钥解密后的密码。
+使用```sskey -d 密文```可以得到指定密文，默认密钥解密后的密码。
 
-### 秘钥生成文件
+### 密钥生成文件
 
 针对不同的技术栈，使用：
 
@@ -81,7 +81,7 @@ sskey -java user
 sskey -go user
 ```
 
-生成指定user为秘钥的key、iv混淆生成文件（Console file），加大破解难度,应用于不同技术栈项目中。
+生成指定user为密钥的key、iv混淆生成文件（Console file），加大破解难度,应用于不同技术栈项目中。
 
 key与iv中，字符都是随机的，0-255范围内（对应二进制转为10进制整数），超出0-127Ascii码可以识别的范围。
 
@@ -91,15 +91,15 @@ key与iv中，字符都是随机的，0-255范围内（对应二进制转为10�
 
 可以生成包含key,iv混淆生成的main()方法go语言文件。
 
-将这个文件进行编译即生成了以user为秘钥的加密器。
+将这个文件进行编译即生成了以user为密钥的加密器。
 
-### 传递秘钥
+### 传递密钥
 
 ``sskey -sync aaa,bbb,ccc http://ip:port/sskeys/token ``
 
-将秘钥加密进行传递到远程机器，远程机器需要提供带token的api，来获取秘钥密文。
+将密钥加密进行传递到远程机器，远程机器需要提供带token的api，来获取密钥密文。
 
-远程机器使用秘钥来完成远程机器的部署工作，要确保秘钥的使用安全性，可以结合ssgo/deploy来做自动化部署。
+远程机器使用密钥来完成远程机器的部署工作，要确保密钥的使用安全性，可以结合ssgo/deploy来做自动化部署。
 
 http://ip:port/sskeys/token为post形式。
 
@@ -109,21 +109,21 @@ http://ip:port/sskeys/token为post形式。
 
 ![](sskey.png)
 
-秘钥管理员拥有sskey整体权限。
+密钥管理员拥有sskey整体权限。
 
-- -c创建秘钥，放入本地的秘钥库。
-- -l查看秘钥库中的秘钥列表。
-- -java -php -go 生成指定秘钥对应的混淆文件。
+- -c创建密钥，放入本地的密钥库。
+- -l查看密钥库中的密钥列表。
+- -java -php -go 生成指定密钥对应的混淆文件。
 - 将混淆文件加入到自动化构建工具中，自动化构建工具包含的逻辑不可开放（可以用go来写一个deploy），和加密器一起配合使用。
-- -o生成go代码编译成加密器，根据不同的秘钥分发给不同部署人员使用。
+- -o生成go代码编译成加密器，根据不同的密钥分发给不同部署人员使用。
 
 - 部署人员根据加密器得到密文配置到项目，同时通过部署工具将consule file放入项目中替换默认的key与iv。
 - 部署成功。
 
 整体流程的使用：
-加大了获取秘钥的难度，同时密码在项目中获取不到，保障了项目密码安全。
+加大了获取密钥的难度，同时密码在项目中获取不到，保障了项目密码安全。
 
-开发在本地环境使用的时候，没有consule file，使用默认秘钥，对sskey的使用流程无感知，sskey的执行对开发没有影响。
+开发在本地环境使用的时候，没有consule file，使用默认密钥，对sskey的使用流程无感知，sskey的执行对开发没有影响。
 
 ## 具体解决方法
 
@@ -139,7 +139,7 @@ http://ip:port/sskeys/token为post形式。
 
 #### SSKeySetter.java（自定义实现）
 
-放在项目类的根目录，类固定为SSKeySetter，实现方法固定为public void set(byte[] key, byte[] iv)，方法实现由项目自定义秘钥设置。
+放在项目类的根目录，类固定为SSKeySetter，实现方法固定为public void set(byte[] key, byte[] iv)，方法实现由项目自定义密钥设置。
 
 类似：
 
@@ -213,7 +213,7 @@ public static String decrypt(final String encryptedStr){
 
 #### sskeySetter.go（自定义实现）
 
-放在项目根目录，函数固定为setSSKey(key []byte, iv []byte)，函数实现由项目自定义秘钥设置。
+放在项目根目录，函数固定为setSSKey(key []byte, iv []byte)，函数实现由项目自定义密钥设置。
 
 类似：
 
@@ -280,7 +280,7 @@ function set_sskey($key,$iv) {
 
 自定义setKeyIv($key, $iv)方法可被调用，由sskeySetter.php来调用。
 
-当项目中没有sskeyStarter.php,加密类setKeyIv($key, $iv)没有调用入口，使用默认秘钥。
+当项目中没有sskeyStarter.php,加密类setKeyIv($key, $iv)没有调用入口，使用默认密钥。
 
 #### 调用
 
