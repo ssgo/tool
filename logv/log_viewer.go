@@ -7,10 +7,12 @@ import (
 	"github.com/ssgo/standard"
 	"github.com/ssgo/u"
 	"io"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 //var useJson bool
@@ -83,7 +85,17 @@ func output(line string) {
 		fmt.Println(line)
 		return
 	}
-	logTime := log.MakeTime(b.LogTime)
+
+	var logTime time.Time
+	if strings.ContainsRune(b.LogTime, 'T') {
+		logTime = log.MakeTime(b.LogTime)
+	} else {
+		ft := u.Float64(b.LogTime)
+		ts := int64(math.Floor(ft))
+		tns := int64((ft - float64(ts)) * 1e9)
+		logTime = time.Unix(ts, tns)
+	}
+
 	showTime := logTime.Format(u.StringIf(showFullTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
 	t1 := strings.Split(showTime, " ")
 	d := t1[0]
@@ -98,11 +110,11 @@ func output(line string) {
 	}
 	t = t2[0]
 	fmt.Print(u.Dim(d), " ")
-	if b.Extra["debug"] != nil {
+	if b.Extra["debug"] != "" {
 		fmt.Print(u.Dim(t))
-	} else if b.Extra["warning"] != nil {
+	} else if b.Extra["warning"] != "" {
 		fmt.Print(u.BYellow(t))
-	} else if b.Extra["error"] != nil {
+	} else if b.Extra["error"] != "" {
 		fmt.Print(u.BRed(t))
 	} else {
 		fmt.Print(t)
@@ -147,16 +159,16 @@ func output(line string) {
 			fmt.Print("  ", u.String(r.ResponseData))
 		}
 	} else {
-		if b.Extra["debug"] != nil {
+		if b.Extra["debug"] != "" {
 			fmt.Print("  ", u.Dim(b.Extra["debug"]))
 			delete(b.Extra, "debug")
-		} else if b.Extra["info"] != nil {
+		} else if b.Extra["info"] != "" {
 			fmt.Print("  ", b.Extra["info"])
 			delete(b.Extra, "info")
-		} else if b.Extra["warning"] != nil {
+		} else if b.Extra["warning"] != "" {
 			fmt.Print("  ", u.Yellow(b.Extra["warning"]))
 			delete(b.Extra, "warning")
-		} else if b.Extra["error"] != nil {
+		} else if b.Extra["error"] != "" {
 			fmt.Print("  ", u.Red(b.Extra["error"]))
 			delete(b.Extra, "error")
 		} else if b.LogType == "undefined" {
@@ -167,7 +179,7 @@ func output(line string) {
 	}
 
 	callStacks := b.Extra["callStacks"]
-	if callStacks != nil {
+	if callStacks != "" {
 		delete(b.Extra, "callStacks")
 	}
 
@@ -177,17 +189,18 @@ func output(line string) {
 		}
 	}
 
-	if showFullTime && callStacks != nil {
-		callStacksList, ok := callStacks.([]interface{})
+	if showFullTime && callStacks != "" {
+		//callStacksList, ok := callStacks.([]string)
 
 		fmt.Print(" ")
-		if ok {
-			for _, v := range callStacksList {
-				fmt.Print(" ", u.Magenta(v, u.AttrItalic))
-			}
-		} else {
-			fmt.Print(" ", u.Magenta(u.String(callStacks), u.AttrItalic))
-		}
+		fmt.Print(callStacks)
+		//if ok {
+		//	for _, v := range callStacksList {
+		//		fmt.Print(" ", u.Magenta(v, u.AttrItalic))
+		//	}
+		//} else {
+		//	fmt.Print(" ", u.Magenta(u.String(callStacks), u.AttrItalic))
+		//}
 	}
 	fmt.Println()
 }
