@@ -79,8 +79,8 @@ func main() {
 		}
 	}
 
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	go func() {
 		<-c
 		stop()
@@ -152,15 +152,15 @@ func printUsage() {
 	fmt.Println("	" + u.Cyan("-r") + "	" + u.White("执行当前目录中的程序，相当于 go run *.go"))
 	fmt.Println("	" + u.Cyan("-t") + "	" + u.White("执行测试用例，相当于 go test ./tests 或 go test ./tests（自动识别是否存在tests文件夹）"))
 	fmt.Println("	" + u.Cyan("-b") + "	" + u.White("执行性能测试，相当于 go -bench .*，需要额外指定 -t 或 test 参数"))
-	fmt.Println("	" + u.Cyan("...") + "	" + u.White("可以使用所有 go 命令的参数"))
+	fmt.Println("	" + u.Cyan("...") + "	" + u.White("可以使用除 run 外的 go 命令的参数"))
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println("	" + u.Cyan("gowatch -r"))
 	fmt.Println("	" + u.Cyan("gowatch -t"))
 	fmt.Println("	" + u.Cyan("gowatch -t -b"))
 	fmt.Println("	" + u.Cyan("gowatch -p ../ -t"))
-	fmt.Println("	" + u.Cyan("gowatch run start.go"))
-	fmt.Println("	" + u.Cyan("gowatch run samePackages start.go"))
+	//fmt.Println("	" + u.Cyan("gowatch run start.go"))
+	//fmt.Println("	" + u.Cyan("gowatch run samePackages start.go"))
 	fmt.Println("	" + u.Cyan("gowatch test"))
 	fmt.Println("	" + u.Cyan("gowatch test ./testcase"))
 	fmt.Println("")

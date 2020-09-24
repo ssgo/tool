@@ -16,7 +16,7 @@ import (
 )
 
 //var useJson bool
-var showFullTime bool
+var showShortTime bool
 
 func main() {
 	fileName := ""
@@ -28,8 +28,8 @@ func main() {
 			return
 		//case "-j":
 		//	useJson = true
-		case "-f":
-			showFullTime = true
+		case "-s":
+			showShortTime = true
 		default:
 			if fileName == "" {
 				fileName = os.Args[i]
@@ -43,10 +43,9 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		if fd != nil {
-			_ = fd.Close()
-		}
-		//os.Exit(0)
+		//if fd != nil {
+		//	_ = fd.Close()
+		//}
 	}()
 
 	if fileName != "" {
@@ -75,6 +74,10 @@ func main() {
 	}
 }
 
+func shortTime(tm string) string{
+	return strings.Replace(tm[5:16], "T", " ", 1)
+}
+
 func output(line string) {
 	if line == "" {
 		return
@@ -96,7 +99,7 @@ func output(line string) {
 		logTime = time.Unix(ts, tns)
 	}
 
-	showTime := logTime.Format(u.StringIf(showFullTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
+	showTime := logTime.Format(u.StringIf(!showShortTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
 	t1 := strings.Split(showTime, " ")
 	d := t1[0]
 	t := ""
@@ -141,7 +144,7 @@ func output(line string) {
 				fmt.Print("  ", u.Magenta(k, u.AttrItalic), u.Dim(":"), u.String(v))
 			}
 		}
-		if showFullTime {
+		if !showShortTime {
 			if r.RequestHeaders != nil {
 				for k, v := range r.RequestHeaders {
 					fmt.Print("  ", u.Magenta(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
@@ -150,7 +153,7 @@ func output(line string) {
 		}
 
 		fmt.Print("  ", u.BWhite(u.String(r.ResponseDataLength)))
-		if showFullTime {
+		if !showShortTime {
 			if r.ResponseHeaders != nil {
 				for k, v := range r.ResponseHeaders {
 					fmt.Print("  ", u.Blue(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
@@ -158,6 +161,14 @@ func output(line string) {
 			}
 			fmt.Print("  ", u.String(r.ResponseData))
 		}
+	} else 	if b.LogType == standard.LogTypeStatistic {
+		r := standard.StatisticLog{}
+		log.ParseSpecialLog(b, &r)
+		fmt.Print("  ", u.Dim(r.ServerId+":"+r.App))
+		fmt.Print(" ", u.Dim(shortTime(r.StartTime)+":"+shortTime(r.EndTime)))
+		fmt.Print(" ", u.Green(u.String(r.Total)), " ", u.Magenta(u.String(r.Failed)))
+		fmt.Print(" ", fmt.Sprintf("%.4f",r.MinTime), " ", u.Cyan(fmt.Sprintf("%.4f",r.AvgTime)), " ", fmt.Sprintf("%.4f",r.MaxTime))
+		fmt.Print(" ", r.Name)
 	} else {
 		if b.Extra["debug"] != "" {
 			fmt.Print("  ", u.Dim(b.Extra["debug"]))
@@ -189,7 +200,7 @@ func output(line string) {
 		}
 	}
 
-	if showFullTime && callStacks != "" {
+	if !showShortTime && callStacks != "" {
 		//callStacksList, ok := callStacks.([]string)
 
 		fmt.Print(" ")
@@ -207,9 +218,9 @@ func output(line string) {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("	lv [-j] [-f] [file]")
-	fmt.Println("	" + u.Cyan("-j") + u.White("Josn output"))
-	fmt.Println("	" + u.Cyan("-f") + u.White("show full time"))
+	fmt.Println("	lv [-j] [-s] [file]")
+	fmt.Println("	" + u.Cyan("-j") + "	" + u.White("Josn output"))
+	fmt.Println("	" + u.Cyan("-s") + "	" + u.White("show full time"))
 	fmt.Println("")
 	fmt.Println("Samples:")
 	fmt.Println("	" + u.Cyan("tail ***.log | lv"))
