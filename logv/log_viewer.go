@@ -136,8 +136,8 @@ func output(line string) {
 			fmt.Print(" ", u.BGreen(u.String(r.ResponseCode)), " ", u.Green(u.String(r.UsedTime)))
 		}
 
-		fmt.Print("  ", u.Cyan(r.ClientIp), u.Dim("("), r.FromApp, u.Dim(":"), r.FromNode, u.Dim(")"), u.Dim(" => "), u.Cyan(r.App), u.Dim(":"), r.AuthLevel, u.Dim(":"), r.Priority, u.Dim("@"), r.Node)
-		fmt.Print("  ", r.RequestId, u.Dim(":"), r.ClientId, u.Dim(":"), r.SessionId)
+		fmt.Print("  ", u.Cyan(r.ClientIp), u.Dim("("), r.FromApp, u.Dim(":"), r.FromNode, u.Dim(")"), u.Dim(" => "), u.Cyan(r.App), u.Dim("#"), r.AuthLevel, u.Dim("#"), r.Priority, u.Dim("@"), r.Node)
+		fmt.Print("  ", r.RequestId, u.Dim("@"), u.Cyan(r.UserId), u.Dim(">"), r.SessionId)
 		fmt.Print("  ", r.Host, " ", r.Scheme, " ", r.Proto, " ", r.Method, " ", u.Cyan(r.Path))
 		if r.RequestData != nil {
 			for k, v := range r.RequestData {
