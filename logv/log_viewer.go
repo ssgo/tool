@@ -164,8 +164,8 @@ func output(line string) {
 	} else 	if b.LogType == standard.LogTypeStatistic {
 		r := standard.StatisticLog{}
 		log.ParseSpecialLog(b, &r)
-		fmt.Print("  ", u.Dim(r.ServerId+":"+r.App))
-		fmt.Print(" ", u.Dim(shortTime(r.StartTime)+":"+shortTime(r.EndTime)))
+		fmt.Print("  ", u.Dim(r.App))
+		fmt.Print(" ", u.Dim(shortTime(r.StartTime)+" ~ "+shortTime(r.EndTime)))
 		fmt.Print(" ", u.Green(u.String(r.Total)), " ", u.Magenta(u.String(r.Failed)))
 		fmt.Print(" ", fmt.Sprintf("%.4f",r.MinTime), " ", u.Cyan(fmt.Sprintf("%.4f",r.AvgTime)), " ", fmt.Sprintf("%.4f",r.MaxTime))
 		fmt.Print(" ", r.Name)
