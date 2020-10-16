@@ -238,19 +238,17 @@ func output(line string) {
 	}
 
 	if !showShortTime && callStacks != nil {
-
-		//fmt.Print(" ")
-		//fmt.Print(callStacks)
-		var callStacksList []string
+		var callStacksList []interface{}
 		if callStacksStr, ok := callStacks.(string) ; ok && len(callStacksStr)>2 && callStacksStr[0] == '[' {
-			callStacksList = make([]string, 0)
+			callStacksList = make([]interface{}, 0)
 			json.Unmarshal([]byte(callStacksStr), &callStacksList)
 		}else {
-			callStacksList, ok = callStacks.([]string)
+			callStacksList, ok = callStacks.([]interface{})
 		}
 
 		if callStacksList != nil {
-			for _, v := range callStacksList {
+			for _, vi := range callStacksList {
+				v := u.String(vi)
 				postfix := ""
 				if pos := strings.LastIndexByte(v, '/'); pos != -1 {
 					postfix = v[pos+1:]
@@ -264,7 +262,8 @@ func output(line string) {
 				}
 			}
 		} else {
-			fmt.Print(" ", u.Magenta(u.String(callStacks), u.AttrItalic))
+			fmt.Print(" ")
+			lo.Print(u.String(callStacks))
 		}
 	}
 	fmt.Println()
