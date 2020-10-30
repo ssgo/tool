@@ -87,11 +87,11 @@ type LevelOutput struct{
 func (levelOutput *LevelOutput)Print(v string){
 	switch levelOutput.level {
 	case "debug", "info":
-		fmt.Print(v)
+		fmt.Print(" ", v)
 	case "warning":
-		fmt.Print(u.Yellow(v))
+		fmt.Print(" ", u.Yellow(v))
 	case "error":
-		fmt.Print(u.Red(v))
+		fmt.Print(" ", u.Red(v))
 	}
 	return
 }
@@ -171,18 +171,21 @@ func output(line string) {
 			fmt.Print(" ", u.BGreen(u.String(r.ResponseCode)), " ", u.Green(u.String(r.UsedTime)))
 		}
 
-		fmt.Print("  ", u.Cyan(r.ClientIp), u.Dim("("), r.FromApp, u.Dim(":"), r.FromNode, u.Dim(")"), u.Dim(" => "), u.Cyan(r.App), u.Dim("#"), r.AuthLevel, u.Dim("#"), r.Priority, u.Dim("@"), r.Node)
-		fmt.Print("  ", r.RequestId, u.Dim("@"), u.Cyan(r.UserId), u.Dim(">"), r.SessionId)
-		fmt.Print("  ", r.Host, " ", r.Scheme, " ", r.Proto, " ", r.Method, " ", u.Cyan(r.Path))
+		fmt.Print("  ", r.ClientIp, u.Dim(" from"), u.Dim("("), u.Cyan(r.FromApp), u.Dim(":"), r.FromNode, u.Dim(")"), u.Dim(" to"), u.Dim("("), u.Cyan(r.App), u.Dim(":"), r.Node, u.Dim(":"), r.AuthLevel, u.Dim(":"), r.Priority, u.Dim(")"))
+		if r.RequestId != r.TraceId {
+			fmt.Print(u.Dim("  requestId:"), r.RequestId)
+		}
+		fmt.Print("  ", u.Dim("user"), u.Dim(":"), u.Cyan(r.UserId), u.Dim(" sess"), u.Dim(":"), u.Cyan(r.SessionId), u.Dim(" dev"), u.Dim(":"), u.Cyan(r.DeviceId), u.Dim(" app"), u.Dim(":"), u.Cyan(r.ClientAppName), u.Dim(":"), u.Cyan(r.ClientAppVersion))
+		fmt.Print("  ", r.Scheme, " ", r.Proto, " ", r.Host, " ", r.Method, " ", u.Cyan(r.Path))
 		if r.RequestData != nil {
 			for k, v := range r.RequestData {
-				fmt.Print("  ", u.Magenta(k, u.AttrItalic), u.Dim(":"), u.String(v))
+				fmt.Print("  ", u.Cyan(k, u.AttrItalic), u.Dim(":"), u.String(v))
 			}
 		}
 		if !showShortTime {
 			if r.RequestHeaders != nil {
 				for k, v := range r.RequestHeaders {
-					fmt.Print("  ", u.Magenta(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
+					fmt.Print("  ", u.Cyan(k, u.AttrDim, u.AttrItalic), u.Dim(":"), u.String(v))
 				}
 			}
 		}
