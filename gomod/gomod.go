@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -29,23 +30,32 @@ func main() {
 			fmt.Println(line)
 		}
 		fmt.Println(len(outs), "Versions")
-	case "-l", "v*", "--sort=taggerdate":
-		path := "./"
+	case "-l":
+		rootPath := "./"
 		if len(os.Args) > 2 {
-			path = os.Args[2]
-			if len(path) > 0 && path[len(path)-1] != '/' {
-				path += "/"
+			rootPath = os.Args[2]
+			if len(rootPath) > 0 && rootPath[len(rootPath)-1] != '/' {
+				rootPath += "/"
 			}
 		}
-		files, err := ioutil.ReadDir(path)
+		files, err := ioutil.ReadDir(rootPath)
 		if err != nil {
 			fmt.Println(u.Red(err.Error()))
 			return
 		}
-		os.Chdir(path)
+		os.Chdir(rootPath)
 		for _, file := range files {
 			fileName := file.Name()
 			if fileName[0] == '.' {
+				continue
+			}
+
+			fi, _ := os.Stat(fileName)
+			if !fi.IsDir() {
+				continue
+			}
+
+			if !u.FileExists(path.Join(fileName, ".git")){
 				continue
 			}
 
