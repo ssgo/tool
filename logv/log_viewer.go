@@ -131,6 +131,7 @@ func output(line string) {
 	}
 
 	showTime := logTime.Format(u.StringIf(!showShortTime, "2006-01-02 15:04:05.000000", "01-02 15:04:05"))
+
 	t1 := strings.Split(showTime, " ")
 	d := t1[0]
 	t := ""
@@ -153,6 +154,8 @@ func output(line string) {
 	} else if b.Extra["error"] != nil {
 		lo.level = "error"
 	} else if b.Extra["info"] != nil  {
+		lo.level = "info"
+	} else {
 		lo.level = "info"
 	}
 	lo.Print(t)
