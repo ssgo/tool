@@ -11,10 +11,12 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
 
+var filesModTimeLock = sync.Mutex{}
 var filesModTime = make(map[string]int64)
 
 func main() {
@@ -252,6 +254,7 @@ func stop() {
 
 func watchFiles() bool {
 	changed := false
+	filesModTimeLock.Lock()
 	for fileName, modTime := range filesModTime {
 		info, err := os.Stat(fileName)
 		if err != nil {
@@ -263,6 +266,7 @@ func watchFiles() bool {
 			changed = true
 		}
 	}
+	filesModTimeLock.Unlock()
 	return changed
 }
 
@@ -292,9 +296,11 @@ func watchPath(path string) {
 			//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
 			//	continue
 			//}
+			filesModTimeLock.Lock()
 			if filesModTime[path+file.Name()] == 0 {
 				filesModTime[path+file.Name()] = 1
 			}
+			filesModTimeLock.Unlock()
 		}
 	}
 }
