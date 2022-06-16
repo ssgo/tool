@@ -61,9 +61,19 @@ func main() {
 	}
 
 	inputReader := bufio.NewReader(fd)
+	savedLine := ""
 	for {
 		line, err := inputReader.ReadString('\n')
-		//fmt.Println("[",line,"]")
+		//fmt.Println("[", len(line),"]")
+		if len(line) == 4097 && line[4095] != '}' {
+			savedLine += line[0:4096]
+			continue
+		}
+
+		if savedLine != "" {
+			line = savedLine+line
+			savedLine = ""
+		}
 		line = strings.TrimRight(line, "\r\n")
 		output(line)
 		if err != nil {
@@ -155,8 +165,8 @@ func output(line string) {
 		lo.level = "error"
 	} else if b.Extra["info"] != nil  {
 		lo.level = "info"
-	} else {
-		lo.level = "info"
+	//} else {
+	//	lo.level = "info"
 	}
 	lo.Print(t)
 
@@ -205,11 +215,11 @@ func output(line string) {
 	} else 	if b.LogType == standard.LogTypeStatistic {
 		r := standard.StatisticLog{}
 		log.ParseSpecialLog(b, &r)
+		fmt.Print(" ", u.Cyan(r.Name, u.AttrBold))
 		fmt.Print("  ", u.Dim(r.App))
 		fmt.Print(" ", u.Dim(shortTime(r.StartTime)+" ~ "+shortTime(r.EndTime)))
-		fmt.Print(" ", u.Green(u.String(r.Total)), " ", u.Magenta(u.String(r.Failed)))
-		fmt.Print(" ", fmt.Sprintf("%.4f",r.MinTime), " ", u.Cyan(fmt.Sprintf("%.4f",r.AvgTime)), " ", fmt.Sprintf("%.4f",r.MaxTime))
-		fmt.Print(" ", r.Name)
+		fmt.Print(" ", u.Green(u.String(r.Times)), " ", u.Magenta(u.String(r.Failed)))
+		fmt.Print(" ", fmt.Sprintf("%.4f",r.Min), " ", u.Cyan(fmt.Sprintf("%.4f",r.Avg)), " ", fmt.Sprintf("%.4f",r.Max))
 	} else 	if b.LogType == standard.LogTypeTask {
 		r := standard.TaskLog{}
 		log.ParseSpecialLog(b, &r)

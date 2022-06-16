@@ -18,11 +18,21 @@ import (
 
 var filesModTimeLock = sync.Mutex{}
 var filesModTime = make(map[string]int64)
+var ignores = make([]string, 0)
 
 func main() {
 	if len(os.Args) == 1 {
 		printUsage()
 		return
+	}
+
+	if u.FileExists(".gitignore") {
+		gitIgnores, _ := u.ReadFileLines(".gitignore")
+		for _, line := range gitIgnores {
+			if len(line)>0 && line[0] == '/' {
+				ignores = append(ignores, line[1:])
+			}
+		}
 	}
 
 	basePaths := make([]string, 0)
@@ -105,7 +115,7 @@ func main() {
 				stop()
 				changed <- true
 			}
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 500)
 		}
 	}(changed)
 
@@ -287,7 +297,15 @@ func watchPath(path string) {
 			continue
 		}
 		if file.IsDir() {
-			watchPath(path + file.Name() + "/")
+			ignored := false
+			for _, ignore := range ignores {
+				if strings.HasPrefix(fileName, ignore) {
+					ignored = true
+				}
+			}
+			if !ignored {
+				watchPath(path + fileName + "/")
+			}
 		} else {
 			if !allType && !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") && !strings.HasSuffix(fileName, ".yml") {
 				continue

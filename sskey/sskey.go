@@ -95,8 +95,8 @@ func main() {
 		_ = fd.Close()
 
 		key, iv := loadKey(keyPath + os.Args[2])
-		s1 := u.EncryptAes("Hello World!", key[2:], iv[5:])
-		s2 := u.DecryptAes(s1, key[2:], iv[5:])
+		s1 := u.EncryptAes("Hello World!", key, iv)
+		s2 := u.DecryptAes(s1, key, iv)
 		fmt.Println(u.Cyan(keyName), " Created at", keyPath+keyName)
 		fmt.Println("  Test Encrypt: ", u.Yellow("Hello World! "+s1))
 		fmt.Println("  Test Decrypt: ", u.Yellow(s1), "=>", u.Yellow(s2))
@@ -104,8 +104,8 @@ func main() {
 	case "-t":
 		key, iv := loadKey(keyPath + os.Args[2])
 		s := "你好，Hello，안녕하세요，こんにちは，ON LI DAY FaOHE MASHI，hallo，bonjour，Sulut，moiẽn，hej,hallå，halló，illāc，‏هتاف للترحيب, ‏أهلا，!السلام عليكم，درود，הלו ，גוט־מאָרגן ，привет，Dzień dobry，байна уу,мэнд її，नम्स्कार，नमस्ते"
-		s1 := u.EncryptAes(s, key[2:], iv[5:])
-		s2 := u.DecryptAes(s1, key[2:], iv[5:])
+		s1 := u.EncryptAes(s, key, iv)
+		s2 := u.DecryptAes(s1, key, iv)
 		fmt.Println("  Test Encrypt: ", u.Yellow(s[0:20]+"..."), "=>", u.Yellow(s1))
 		fmt.Println("  Test Decrypt: ", u.Yellow(s1), "=>", u.Yellow(s2[0:20]+"..."))
 		if s2 != s {
@@ -122,8 +122,6 @@ func main() {
 		var s string
 		if len(os.Args) > 3 {
 			key, iv = loadKey(keyPath + os.Args[2])
-			key = key[2:]
-			iv = iv[5:]
 			s = os.Args[3]
 		} else {
 			key = defaultKey
@@ -134,6 +132,7 @@ func main() {
 		s2 := u.DecryptAes(s1, key, iv)
 
 		fmt.Println("Encrypted: ", u.Yellow(s1))
+		fmt.Println("Encrypted bytes: ", u.UnUrlBase64(s1))
 		if s2 != s {
 			fmt.Println(u.Red("Test Failed"))
 			fmt.Println(u.Yellow(s))
@@ -147,16 +146,16 @@ func main() {
 		var s string
 		if len(os.Args) > 3 {
 			key, iv = loadKey(keyPath + os.Args[2])
-			key = key[2:]
-			iv = iv[5:]
 			s = os.Args[3]
 		} else {
 			key = defaultKey
 			iv = defaultIv
 			s = os.Args[2]
 		}
-		s2 := u.DecryptAes(s, key, iv)
-		fmt.Println("Decrypted: ", u.Yellow(s2))
+		//fmt.Println("pre Decrypted: ", u.UnUrlBase64(s))
+		b2 := u.DecryptAesBytes(s, key, iv)
+		fmt.Println("Decrypted: ", u.Yellow(string(b2)))
+		fmt.Println("Decrypted bytes: ", b2)
 	case "-php":
 		makeCode("php", keyPath)
 	case "-java":
@@ -164,7 +163,22 @@ func main() {
 	case "-go":
 		makeCode("go", keyPath)
 	case "-o":
-		makeCode("encryptor", keyPath)
+		var useKey, useIv, forKey, forIv []byte
+		if len(os.Args) > 3 {
+			useKey, useIv = loadKey(keyPath + os.Args[2])
+			forKey, forIv = loadKey(keyPath + os.Args[3])
+		} else {
+			useKey = defaultKey
+			useIv = defaultIv
+			forKey, forIv = loadKey(keyPath + os.Args[2])
+		}
+
+		fmt.Println("Encrypted key: ", u.Yellow(u.EncryptAesBytes(forKey, useKey, useIv)))
+		//fmt.Println("====2", forKey)
+		fmt.Println("Encrypted key bytes: ", u.UnUrlBase64(u.EncryptAesBytes(forKey, useKey, useIv)))
+		//fmt.Println("====3", forKey)
+		fmt.Println("Encrypted iv: ", u.Yellow(u.EncryptAesBytes(forIv, useKey, useIv)))
+		fmt.Println("Encrypted iv bytes: ", u.UnUrlBase64(u.EncryptAesBytes(forIv, useKey, useIv)))
 	case "-sync":
 		syncSSKeys(keyPath)
 	default:
@@ -224,8 +238,8 @@ func makeCode(codeName string, keyPath string) {
 		fmt.Println("please enter your key name!")
 		return
 	}
-	key, iv := loadKey(keyPath + os.Args[2])
-	codeDetail, err := sskeylib.MakeCode(codeName, key, iv)
+	buf := getKey(keyPath+os.Args[2], false)
+	codeDetail, err := sskeylib.MakeCode(codeName, buf[0:40], buf[40:80])
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -293,7 +307,13 @@ func getKey(keyFile string, usedDefault bool) []byte {
 
 func loadKey(keyFile string) ([]byte, []byte) {
 	buf := getKey(keyFile, false)
-	return buf[0:40], buf[40:80]
+	key := make([]byte, 40)
+	iv := make([]byte, 40)
+	for i := 0; i < 40; i++ {
+		key[i] = buf[i]
+		iv[i] = buf[40+i]
+	}
+	return key[2:], iv[5:]
 }
 
 func printUsage() {
@@ -308,7 +328,8 @@ func printUsage() {
 	fmt.Println(u.Cyan("	-php keyName	") + u.White("Output php code"))
 	fmt.Println(u.Cyan("	-java keyName	") + u.White("Output java code"))
 	fmt.Println(u.Cyan("	-go keyName	") + u.White("Output go code"))
-	fmt.Println(u.Cyan("	-o keyName	") + u.White("Encrypt tool(make executable file)"))
+	fmt.Println(u.Cyan("	-o keyName	") + u.White("Output key&iv by default key"))
+	fmt.Println(u.Cyan("	-o [byKeyName] keyName	") + u.White("Output key&iv by specified key)"))
 	fmt.Println(u.Cyan("	-sync keyNames	") + u.White("Synchronization of keys to another machine from url"))
 	fmt.Println("")
 	fmt.Println("Samples:")
@@ -323,6 +344,7 @@ func printUsage() {
 	fmt.Println(u.Cyan("	sskey -java aaa"))
 	fmt.Println(u.Cyan("	sskey -go aaa"))
 	fmt.Println(u.Cyan("	sskey -o aaa"))
+	fmt.Println(u.Cyan("	sskey -o bbb aaa"))
 	fmt.Println(u.Cyan("	sskey -sync aaa,bbb,ccc http://192.168.3.207/sskeys/token"))
 	fmt.Println("")
 }

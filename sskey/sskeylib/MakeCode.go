@@ -143,6 +143,7 @@ func MakeCode(codeName string, key, iv []byte) (string, error) {
 	if tpl == "" {
 		return "", errors.New("tpl not exists: " + codeName)
 	}
+	//fmt.Println(len(key), len(iv))
 	if len(key) < 40 || len(iv) < 40 {
 		return "", errors.New("bad key or iv")
 	}
