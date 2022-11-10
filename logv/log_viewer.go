@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -71,7 +72,7 @@ func main() {
 		}
 
 		if savedLine != "" {
-			line = savedLine+line
+			line = savedLine + line
 			savedLine = ""
 		}
 		line = strings.TrimRight(line, "\r\n")
@@ -85,16 +86,15 @@ func main() {
 	}
 }
 
-
-func shortTime(tm string) string{
+func shortTime(tm string) string {
 	return strings.Replace(tm[5:16], "T", " ", 1)
 }
 
-type LevelOutput struct{
+type LevelOutput struct {
 	level string
 }
 
-func (levelOutput *LevelOutput)Print(v string){
+func (levelOutput *LevelOutput) Print(v string) {
 	switch levelOutput.level {
 	case "debug", "info":
 		fmt.Print(" ", v)
@@ -106,7 +106,7 @@ func (levelOutput *LevelOutput)Print(v string){
 	return
 }
 
-func (levelOutput *LevelOutput)BPrint(v string){
+func (levelOutput *LevelOutput) BPrint(v string) {
 	switch levelOutput.level {
 	case "debug", "info":
 		fmt.Print(u.BWhite(v))
@@ -118,6 +118,8 @@ func (levelOutput *LevelOutput)BPrint(v string){
 	return
 }
 
+var errorLineMatcher = regexp.MustCompile("(\\w+\\.go:\\d+)")
+
 func output(line string) {
 	if line == "" {
 		return
@@ -126,6 +128,14 @@ func output(line string) {
 	b := log.ParseBaseLog(line)
 	//fmt.Println(u.JsonP(b))
 	if b == nil {
+		// 高亮错误代码
+		if strings.Contains(line, ".go:") {
+			if strings.Contains(line, "/ssgo/") || strings.Contains(line, "/ssdo/") {
+				line = errorLineMatcher.ReplaceAllString(line, u.BYellow("$1"))
+			} else if !strings.Contains(line, "/go/src/") {
+				line = errorLineMatcher.ReplaceAllString(line, u.BRed("$1"))
+			}
+		}
 		fmt.Println(line)
 		return
 	}
@@ -163,10 +173,10 @@ func output(line string) {
 		lo.level = "warning"
 	} else if b.Extra["error"] != nil {
 		lo.level = "error"
-	} else if b.Extra["info"] != nil  {
+	} else if b.Extra["info"] != nil {
 		lo.level = "info"
-	//} else {
-	//	lo.level = "info"
+		//} else {
+		//	lo.level = "info"
 	}
 	lo.Print(t)
 
@@ -212,21 +222,21 @@ func output(line string) {
 			}
 			fmt.Print("  ", u.String(r.ResponseData))
 		}
-	} else 	if b.LogType == standard.LogTypeStatistic {
+	} else if b.LogType == standard.LogTypeStatistic {
 		r := standard.StatisticLog{}
 		log.ParseSpecialLog(b, &r)
 		fmt.Print(" ", u.Cyan(r.Name, u.AttrBold))
 		fmt.Print("  ", u.Dim(r.App))
 		fmt.Print(" ", u.Dim(shortTime(r.StartTime)+" ~ "+shortTime(r.EndTime)))
 		fmt.Print(" ", u.Green(u.String(r.Times)), " ", u.Magenta(u.String(r.Failed)))
-		fmt.Print(" ", fmt.Sprintf("%.4f",r.Min), " ", u.Cyan(fmt.Sprintf("%.4f",r.Avg)), " ", fmt.Sprintf("%.4f",r.Max))
-	} else 	if b.LogType == standard.LogTypeTask {
+		fmt.Print(" ", fmt.Sprintf("%.4f", r.Min), " ", u.Cyan(fmt.Sprintf("%.4f", r.Avg)), " ", fmt.Sprintf("%.4f", r.Max))
+	} else if b.LogType == standard.LogTypeTask {
 		r := standard.TaskLog{}
 		log.ParseSpecialLog(b, &r)
 		if r.Succeed {
-			fmt.Print("  ", u.Green(r.Name), " ", u.BGreen(fmt.Sprintf("%.4f",r.UsedTime)))
-		}else{
-			fmt.Print("  ", u.Red(r.Name), " ", u.BRed(fmt.Sprintf("%.4f",r.UsedTime)))
+			fmt.Print("  ", u.Green(r.Name), " ", u.BGreen(fmt.Sprintf("%.4f", r.UsedTime)))
+		} else {
+			fmt.Print("  ", u.Red(r.Name), " ", u.BRed(fmt.Sprintf("%.4f", r.UsedTime)))
 		}
 		fmt.Print(" @", u.Dim(shortTime(r.StartTime)), " @", u.Dim(r.Node))
 		fmt.Print(" ", u.Json(r.Args))
@@ -255,10 +265,10 @@ func output(line string) {
 
 	if !showShortTime && callStacks != nil {
 		var callStacksList []interface{}
-		if callStacksStr, ok := callStacks.(string) ; ok && len(callStacksStr)>2 && callStacksStr[0] == '[' {
+		if callStacksStr, ok := callStacks.(string); ok && len(callStacksStr) > 2 && callStacksStr[0] == '[' {
 			callStacksList = make([]interface{}, 0)
 			json.Unmarshal([]byte(callStacksStr), &callStacksList)
-		}else {
+		} else {
 			callStacksList, ok = callStacks.([]interface{})
 		}
 
@@ -268,12 +278,12 @@ func output(line string) {
 				postfix := ""
 				if pos := strings.LastIndexByte(v, '/'); pos != -1 {
 					postfix = v[pos+1:]
-					v = v[0:pos+1]
+					v = v[0 : pos+1]
 				}
 				fmt.Print(" ", u.Dim(v))
 				if len(v) > 2 && (v[0] == '/' || v[1] == ':') {
 					lo.BPrint(postfix)
-				}else {
+				} else {
 					lo.Print(postfix)
 				}
 			}

@@ -128,6 +128,9 @@ func main() {
 			iv = defaultIv
 			s = os.Args[2]
 		}
+		if u.FileExists(s) {
+			s, _ = u.ReadFile(s, 1024000)
+		}
 		s1 := u.EncryptAes(s, key, iv)
 		s2 := u.DecryptAes(s1, key, iv)
 
