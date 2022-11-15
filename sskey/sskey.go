@@ -40,7 +40,7 @@ func main() {
 		os.Args = append(os.Args, keyName)
 	}
 
-	if op == "-e" || op == "-d" {
+	if op == "-e" || op == "-d" || op == "-e4" || op == "-d4" {
 		if len(os.Args) < 3 || (len(os.Args) == 3 && u.FileExists(keyPath+os.Args[2])) {
 			data := scanLine(u.Cyan("Please enter data: "))
 			if data == "" {
@@ -117,7 +117,7 @@ func main() {
 			fmt.Println(u.Green("Test Succeed"))
 		}
 
-	case "-e":
+	case "-e", "-e4":
 		var key, iv []byte
 		var s string
 		if len(os.Args) > 3 {
@@ -131,8 +131,14 @@ func main() {
 		if u.FileExists(s) {
 			s, _ = u.ReadFile(s, 1024000)
 		}
-		s1 := u.EncryptAes(s, key, iv)
-		s2 := u.DecryptAes(s1, key, iv)
+		var s1, s2 string
+		if op == "-e4" {
+			s1 = EncryptSM4([]byte(s), key, iv)
+			s2 = string(DecryptSM4(s1, key, iv))
+		} else {
+			s1 = u.EncryptAes(s, key, iv)
+			s2 = u.DecryptAes(s1, key, iv)
+		}
 
 		fmt.Println("Encrypted: ", u.Yellow(s1))
 		fmt.Println("Encrypted bytes: ", u.UnUrlBase64(s1))
@@ -144,7 +150,7 @@ func main() {
 			fmt.Println()
 			fmt.Println(u.Green("Decrypt test Succeed"))
 		}
-	case "-d":
+	case "-d", "-d4":
 		var key, iv []byte
 		var s string
 		if len(os.Args) > 3 {
@@ -328,6 +334,8 @@ func printUsage() {
 	fmt.Println(u.Cyan("	-t keyName	") + u.White("Test key"))
 	fmt.Println(u.Cyan("	-e [keyName] data	") + u.White("Encrypt data by specified key or default key"))
 	fmt.Println(u.Cyan("	-d [keyName] data	") + u.White("Decrypt data by specified key or default key"))
+	fmt.Println(u.Cyan("	-e4 [keyName] data	") + u.White("Encrypt data by specified key or default key with SM4"))
+	fmt.Println(u.Cyan("	-d4 [keyName] data	") + u.White("Decrypt data by specified key or default key with SM4"))
 	fmt.Println(u.Cyan("	-php keyName	") + u.White("Output php code"))
 	fmt.Println(u.Cyan("	-java keyName	") + u.White("Output java code"))
 	fmt.Println(u.Cyan("	-go keyName	") + u.White("Output go code"))
