@@ -89,20 +89,27 @@ func sm4Cbc(key, iv []byte, in []byte, mode bool) (out []byte, err error) {
 }
 
 func EncryptSM4(in []byte, key, iv []byte) string {
+	return base64.URLEncoding.EncodeToString(EncryptSM4Bytes(in, key, iv))
+}
+
+func EncryptSM4Bytes(in []byte, key, iv []byte) []byte {
 	if enBytes, err := sm4Cbc(key, iv, in, true); err == nil {
-		return base64.URLEncoding.EncodeToString(enBytes)
+		return enBytes
 	}
-	return base64.URLEncoding.EncodeToString(in)
+	return in
 }
 
 func DecryptSM4(in string, key, iv []byte) []byte {
-	var enBytes []byte
-	var err error
-	if enBytes, err = base64.URLEncoding.DecodeString(in); err != nil {
-		enBytes = []byte(in)
+	if enBytes, err := base64.URLEncoding.DecodeString(in); err == nil {
+		return DecryptSM4Bytes(enBytes, key, iv)
+	} else {
+		return DecryptSM4Bytes([]byte(in), key, iv)
 	}
-	if deBytes, err := sm4Cbc(key, iv, enBytes, false); err == nil {
+}
+
+func DecryptSM4Bytes(in []byte, key, iv []byte) []byte {
+	if deBytes, err := sm4Cbc(key, iv, in, false); err == nil {
 		return deBytes
 	}
-	return enBytes
+	return in
 }

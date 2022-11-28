@@ -129,27 +129,60 @@ func main() {
 			s = os.Args[2]
 		}
 		if u.FileExists(s) {
-			s, _ = u.ReadFile(s, 1024000)
-		}
-		var s1, s2 string
-		if op == "-e4" {
-			s1 = EncryptSM4([]byte(s), key, iv)
-			s2 = string(DecryptSM4(s1, key, iv))
+			// 加密文件
+			if in, err := u.ReadFileBytes(s); err == nil {
+				outputFile := s + ".e"
+				if len(os.Args) > 4 {
+					outputFile = os.Args[4]
+				}
+				if ofp, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err == nil {
+					var out []byte
+					if op == "-e4" {
+						out = EncryptSM4Bytes(in, key, iv)
+					} else {
+						aes := u.NewAes(key, iv)
+						out = aes.EncryptBytes(in)
+					}
+					_, _ = ofp.Write(out)
+					_ = ofp.Close()
+				}
+			}
 		} else {
-			s1 = u.EncryptAes(s, key, iv)
-			s2 = u.DecryptAes(s1, key, iv)
+			// 加密字符串
+			var sb []byte
+			if strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
+				bs := strings.ReplaceAll(s, " ", ",")
+				//sb := make([]byte, 0)
+				u.UnJson(bs, &sb)
+				fmt.Println("Encrypting bytes: ", sb)
+			}else{
+				sb = []byte(s)
+				fmt.Println("Encrypting string: ", s)
+			}
+			var s1, s2 string
+			if op == "-e4" {
+				s1 = EncryptSM4(sb, key, iv)
+				s2 = string(DecryptSM4(s1, key, iv))
+			} else {
+				aes := u.NewAes(key, iv)
+				s1 = aes.EncryptBytesToUrlBase64(sb)
+				s2 = aes.DecryptUrlBase64ToString(s1)
+				//s1 = u.EncryptAes(s, key, iv)
+				//s2 = u.DecryptAes(s1, key, iv)
+			}
+
+			fmt.Println("Encrypted: ", u.Yellow(s1))
+			fmt.Println("Encrypted bytes: ", u.UnUrlBase64(s1))
+			if s2 != string(sb) {
+				fmt.Println(u.Red("Test Failed"))
+				fmt.Println(u.Yellow(s))
+				fmt.Println(u.Yellow(s2))
+			} else {
+				fmt.Println()
+				fmt.Println(u.Green("Decrypt test Succeed"))
+			}
 		}
 
-		fmt.Println("Encrypted: ", u.Yellow(s1))
-		fmt.Println("Encrypted bytes: ", u.UnUrlBase64(s1))
-		if s2 != s {
-			fmt.Println(u.Red("Test Failed"))
-			fmt.Println(u.Yellow(s))
-			fmt.Println(u.Yellow(s2))
-		} else {
-			fmt.Println()
-			fmt.Println(u.Green("Decrypt test Succeed"))
-		}
 	case "-d", "-d4":
 		var key, iv []byte
 		var s string
@@ -161,10 +194,40 @@ func main() {
 			iv = defaultIv
 			s = os.Args[2]
 		}
-		//fmt.Println("pre Decrypted: ", u.UnUrlBase64(s))
-		b2 := u.DecryptAesBytes(s, key, iv)
-		fmt.Println("Decrypted: ", u.Yellow(string(b2)))
-		fmt.Println("Decrypted bytes: ", b2)
+
+		if u.FileExists(s) {
+			// 解密文件
+			if in, err := u.ReadFileBytes(s); err == nil {
+				outputFile := s + ".d"
+				if strings.HasSuffix(s, ".e") {
+					outputFile = s[0 : len(s)-2]
+				}
+				if len(os.Args) > 4 {
+					outputFile = os.Args[4]
+				}
+				if ofp, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err == nil {
+					var out []byte
+					if op == "-e4" {
+						out = DecryptSM4Bytes(in, key, iv)
+					} else {
+						aes := u.NewAes(key, iv)
+						out = aes.DecryptBytes(in)
+					}
+					_, _ = ofp.Write(out)
+					_ = ofp.Close()
+				}
+			}
+		} else {
+			// 解密字符串
+			var b2 []byte
+			if op == "-e4" {
+				b2 = DecryptSM4(s, key, iv)
+			} else {
+				b2 = u.DecryptAesBytes(s, key, iv)
+			}
+			fmt.Println("Decrypted: ", u.Yellow(string(b2)))
+			fmt.Println("Decrypted bytes: ", b2)
+		}
 	case "-php":
 		makeCode("php", keyPath)
 	case "-java":
