@@ -165,6 +165,11 @@ func output(line string) {
 	}
 	t = t2[0]
 	fmt.Print(u.Dim(d), " ")
+	fmt.Print(t)
+	if s != "" {
+		fmt.Print(u.Dim("." + s))
+	}
+	fmt.Print(" ", u.White(b.TraceId, u.AttrDim, u.AttrUnderline))
 
 	lo := LevelOutput{}
 	if b.Extra["debug"] != nil {
@@ -178,12 +183,7 @@ func output(line string) {
 		//} else {
 		//	lo.level = "info"
 	}
-	lo.Print(t)
 
-	if s != "" {
-		fmt.Print(u.Dim("." + s))
-	}
-	fmt.Print(" ", u.White(b.TraceId, u.AttrDim, u.AttrUnderline))
 
 	if b.LogType == standard.LogTypeRequest {
 		r := standard.RequestLog{}
