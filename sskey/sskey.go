@@ -207,7 +207,7 @@ func main() {
 				}
 				if ofp, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err == nil {
 					var out []byte
-					if op == "-e4" {
+					if op == "-d4" {
 						out = DecryptSM4Bytes(in, key, iv)
 					} else {
 						aes := u.NewAes(key, iv)
@@ -220,7 +220,7 @@ func main() {
 		} else {
 			// 解密字符串
 			var b2 []byte
-			if op == "-e4" {
+			if op == "-d4" {
 				b2 = DecryptSM4(s, key, iv)
 			} else {
 				b2 = u.DecryptAesBytes(s, key, iv)
