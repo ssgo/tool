@@ -184,7 +184,6 @@ func output(line string) {
 		//	lo.level = "info"
 	}
 
-
 	if b.LogType == standard.LogTypeRequest {
 		r := standard.RequestLog{}
 		log.ParseSpecialLog(b, &r)
@@ -259,7 +258,15 @@ func output(line string) {
 
 	if b.Extra != nil {
 		for k, v := range b.Extra {
-			fmt.Print("  ", u.White(k+":", u.AttrDim, u.AttrItalic), u.String(v))
+			if k == "extra" && u.String(v)[0] == '{' {
+				extra := map[string]interface{}{}
+				u.UnJson(u.String(v), &extra)
+				for k2, v2 := range extra {
+					fmt.Print("  ", u.White(k2+":", u.AttrDim, u.AttrItalic), u.String(v2))
+				}
+			} else {
+				fmt.Print("  ", u.White(k+":", u.AttrDim, u.AttrItalic), u.String(v))
+			}
 		}
 	}
 
