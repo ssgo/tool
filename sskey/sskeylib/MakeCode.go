@@ -144,22 +144,25 @@ func MakeCode(codeName string, key, iv []byte) (string, error) {
 		return "", errors.New("tpl not exists: " + codeName)
 	}
 	//fmt.Println(len(key), len(iv))
-	if len(key) < 40 || len(iv) < 40 {
-		return "", errors.New("bad key or iv")
-	}
+	//if len(key) < 40 || len(iv) < 40 {
+	//	return "", errors.New("bad key or iv")
+	//}
 
-	keyOffsets := make([]int, 40)
-	ivOffsets := make([]int, 40)
-	for i := 0; i < 40; i++ {
+	keyOffsets := make([]int, len(key))
+	ivOffsets := make([]int, len(iv))
+	for i := 0; i < len(key); i++ {
 		keyOffsets[i] = u.GlobalRand1.Intn(127)
-		ivOffsets[i] = u.GlobalRand2.Intn(127)
 		if key[i] > 127 {
 			keyOffsets[i] *= -1
 		}
+		key[i] = byte(int(key[i]) + keyOffsets[i])
+	}
+
+	for i := 0; i < len(iv); i++ {
+		ivOffsets[i] = u.GlobalRand2.Intn(127)
 		if iv[i] > 127 {
 			ivOffsets[i] *= -1
 		}
-		key[i] = byte(int(key[i]) + keyOffsets[i])
 		iv[i] = byte(int(iv[i]) + ivOffsets[i])
 	}
 
