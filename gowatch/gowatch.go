@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
@@ -49,9 +50,10 @@ func main() {
 			i++
 			tmpPaths := strings.Split(os.Args[i], ",")
 			for _, path := range tmpPaths {
-				if []byte(path)[len(path)-1] != '/' {
-					path += "/"
-				}
+				//lastChar := []byte(path)[len(path)-1]
+				//if lastChar != '/' && lastChar != '*' {
+				//	path += "/"
+				//}
 				basePaths = append(basePaths, path)
 			}
 		case "-sh":
@@ -122,7 +124,7 @@ func main() {
 	go func() {
 		for {
 			for _, path := range basePaths {
-				watchPath(path)
+				watchPath(path, false)
 			}
 			time.Sleep(time.Second * 3)
 		}
@@ -280,45 +282,58 @@ func watchFiles() bool {
 	return changed
 }
 
-func watchPath(path string) {
-	allType := false
-	if strings.HasSuffix(path, "*") {
+func watchPath(parent string, allType bool) {
+	if strings.HasSuffix(parent, string(os.PathSeparator)+"*") {
 		allType = true
-		path = path[0 : len(path)-2]
+		parent = parent[0 : len(parent)-2]
 	}
-	files, err := ioutil.ReadDir(path)
+	fileInfo, err := os.Stat(parent)
 	if err != nil {
 		return
 	}
-	for _, file := range files {
-		fileName := file.Name()
-		//fileBytes := []byte(file.Name())
-		if fileName[0] == '.' {
-			continue
+	if fileInfo.IsDir() {
+		files, err := ioutil.ReadDir(parent)
+		if err != nil {
+			return
 		}
-		if file.IsDir() {
-			ignored := false
-			for _, ignore := range ignores {
-				if strings.HasPrefix(fileName, ignore) {
-					ignored = true
-				}
-			}
-			if !ignored {
-				watchPath(path + fileName + "/")
-			}
-		} else {
-			if !allType && !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") && !strings.HasSuffix(fileName, ".yml") {
+
+		for _, file := range files {
+			fileName := file.Name()
+			//fileBytes := []byte(file.Name())
+			if fileName[0] == '.' {
 				continue
 			}
-			//l := len(fileBytes)
-			//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
-			//	continue
-			//}
-			filesModTimeLock.Lock()
-			if filesModTime[path+file.Name()] == 0 {
-				filesModTime[path+file.Name()] = 1
+			if file.IsDir() {
+				ignored := false
+				for _, ignore := range ignores {
+					if strings.HasPrefix(fileName, ignore) {
+						ignored = true
+					}
+				}
+				if !ignored {
+					watchPath(parent+ fileName + "/", allType)
+				}
+			} else {
+				if !allType && !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") && !strings.HasSuffix(fileName, ".yml") {
+					continue
+				}
+				//l := len(fileBytes)
+				//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
+				//	continue
+				//}
+				fullFileName := path.Join(parent, file.Name())
+				filesModTimeLock.Lock()
+				if filesModTime[fullFileName] == 0 {
+					filesModTime[fullFileName] = 1
+				}
+				filesModTimeLock.Unlock()
 			}
-			filesModTimeLock.Unlock()
 		}
+	}else{
+		filesModTimeLock.Lock()
+		if filesModTime[parent] == 0 {
+			filesModTime[parent] = 1
+		}
+		filesModTimeLock.Unlock()
 	}
 }

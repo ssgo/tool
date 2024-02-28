@@ -141,7 +141,7 @@ func main() {
 						out = EncryptSM4Bytes(in, key, iv)
 					} else {
 						aes := u.NewAes(key, iv)
-						out = aes.EncryptBytes(in)
+						out, _ = aes.EncryptBytes(in)
 					}
 					_, _ = ofp.Write(out)
 					_ = ofp.Close()
@@ -211,7 +211,7 @@ func main() {
 						out = DecryptSM4Bytes(in, key, iv)
 					} else {
 						aes := u.NewAes(key, iv)
-						out = aes.DecryptBytes(in)
+						out, _ = aes.DecryptBytes(in)
 					}
 					_, _ = ofp.Write(out)
 					_ = ofp.Close()
@@ -223,7 +223,7 @@ func main() {
 			if op == "-d4" {
 				b2 = DecryptSM4(s, key, iv)
 			} else {
-				b2 = u.DecryptAesBytes(s, key, iv)
+				b2, _ = u.DecryptAesBytes([]byte(s), key, iv)
 			}
 			fmt.Println("Decrypted: ", u.Yellow(string(b2)))
 			fmt.Println("Decrypted bytes: ", b2)
@@ -245,12 +245,12 @@ func main() {
 			forKey, forIv = loadKey(keyPath + os.Args[2])
 		}
 
-		fmt.Println("Encrypted key: ", u.Yellow(u.EncryptAesBytes(forKey, useKey, useIv)))
+		fmt.Println("Encrypted key: ", u.Yellow(u.EncryptAes(string(forKey), useKey, useIv)))
 		//fmt.Println("====2", forKey)
-		fmt.Println("Encrypted key bytes: ", u.UnUrlBase64(u.EncryptAesBytes(forKey, useKey, useIv)))
+		fmt.Println("Encrypted key bytes: ", u.UnUrlBase64(u.EncryptAes(string(forKey), useKey, useIv)))
 		//fmt.Println("====3", forKey)
-		fmt.Println("Encrypted iv: ", u.Yellow(u.EncryptAesBytes(forIv, useKey, useIv)))
-		fmt.Println("Encrypted iv bytes: ", u.UnUrlBase64(u.EncryptAesBytes(forIv, useKey, useIv)))
+		fmt.Println("Encrypted iv: ", u.Yellow(u.EncryptAes(string(forIv), useKey, useIv)))
+		fmt.Println("Encrypted iv bytes: ", u.UnUrlBase64(u.EncryptAes(string(forIv), useKey, useIv)))
 	case "-sync":
 		syncSSKeys(keyPath)
 	default:

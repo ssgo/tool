@@ -92,10 +92,11 @@ func shortTime(tm string) string {
 
 type LevelOutput struct {
 	level string
+	levelKey string
 }
 
 func (levelOutput *LevelOutput) Print(v string) {
-	switch levelOutput.level {
+	switch strings.ToLower(levelOutput.level) {
 	case "debug", "info":
 		fmt.Print(" ", v)
 	case "warning":
@@ -107,7 +108,7 @@ func (levelOutput *LevelOutput) Print(v string) {
 }
 
 func (levelOutput *LevelOutput) BPrint(v string) {
-	switch levelOutput.level {
+	switch strings.ToLower(levelOutput.level) {
 	case "debug", "info":
 		fmt.Print(u.BWhite(v))
 	case "warning":
@@ -174,14 +175,28 @@ func output(line string) {
 	lo := LevelOutput{}
 	if b.Extra["debug"] != nil {
 		lo.level = "debug"
+		lo.levelKey = "debug"
 	} else if b.Extra["warning"] != nil {
 		lo.level = "warning"
+		lo.levelKey = "warning"
 	} else if b.Extra["error"] != nil {
 		lo.level = "error"
+		lo.levelKey = "error"
 	} else if b.Extra["info"] != nil {
 		lo.level = "info"
-		//} else {
-		//	lo.level = "info"
+		lo.levelKey = "info"
+	} else if b.Extra["Debug"] != nil {
+		lo.level = "debug"
+		lo.levelKey = "Debug"
+	} else if b.Extra["Warning"] != nil {
+		lo.level = "warning"
+		lo.levelKey = "Warning"
+	} else if b.Extra["Error"] != nil {
+		lo.level = "error"
+		lo.levelKey = "Error"
+	} else if b.Extra["Info"] != nil {
+		lo.level = "info"
+		lo.levelKey = "Info"
 	}
 
 	if b.LogType == standard.LogTypeRequest {
@@ -242,8 +257,8 @@ func output(line string) {
 		fmt.Print(" ", u.Magenta(r.Memo))
 	} else {
 		if lo.level != "" {
-			lo.Print(u.String(b.Extra[lo.level]))
-			delete(b.Extra, lo.level)
+			lo.Print(u.String(b.Extra[lo.levelKey]))
+			delete(b.Extra, lo.levelKey)
 		} else if b.LogType == "undefined" {
 			fmt.Print(" ", u.Dim("-"))
 		} else {
