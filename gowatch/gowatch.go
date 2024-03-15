@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ssgo/u"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -20,6 +19,7 @@ import (
 var filesModTimeLock = sync.Mutex{}
 var filesModTime = make(map[string]int64)
 var ignores = make([]string, 0)
+var watchTypes = []string{".go", ".yml"}
 
 func main() {
 	if len(os.Args) == 1 {
@@ -30,7 +30,7 @@ func main() {
 	if u.FileExists(".gitignore") {
 		gitIgnores, _ := u.ReadFileLines(".gitignore")
 		for _, line := range gitIgnores {
-			if len(line)>0 && line[0] == '/' {
+			if len(line) > 0 && line[0] == '/' {
 				ignores = append(ignores, line[1:])
 			}
 		}
@@ -56,6 +56,13 @@ func main() {
 				//}
 				basePaths = append(basePaths, path)
 			}
+		case "-pt":
+			i++
+			tmpTypes := strings.Split(os.Args[i], ",")
+			watchTypes = make([]string, 0)
+			for _, typ := range tmpTypes {
+				watchTypes = append(watchTypes, typ)
+			}
 		case "-sh":
 			if i < len(os.Args)-1 && os.Args[i+1][0] != '-' {
 				i++
@@ -66,7 +73,7 @@ func main() {
 		case "-r":
 			cmdArgs = append(cmdArgs, "run")
 			runArgs = make([]string, 0)
-			files, err := ioutil.ReadDir("./")
+			files, err := os.ReadDir("./")
 			if err == nil {
 				for _, file := range files {
 					if !strings.HasPrefix(file.Name(), ".") && !strings.HasSuffix(file.Name(), "_test.go") && strings.HasSuffix(file.Name(), ".go") {
@@ -134,7 +141,8 @@ func main() {
 		select {
 		case <-changed:
 			_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
-			fmt.Printf("[Watching "+u.Cyan("%s")+" [Running "+u.Cyan("%s %s")+"\n\n", strings.Join(basePaths, " "), cmd, strings.Join(cmdArgs, " "))
+			curPath, _ := os.Getwd()
+			fmt.Printf("[at "+u.Dim("%s")+"] [watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"] [running "+u.Cyan("%s %s")+"]\n\n", curPath, strings.Join(basePaths, " "), strings.Join(watchTypes, " "), cmd, strings.Join(cmdArgs, " "))
 
 			runPos := -1
 			for i, arg := range cmdArgs {
@@ -160,8 +168,9 @@ func main() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("	gowatch " + u.White("[-p paths] [-t] [-b] [...]"))
-	fmt.Println("	" + u.Cyan("-p") + "	" + u.White("指定监视的路径，默认为 ./，支持逗号隔开的多个路径"))
+	fmt.Println("	gowatch " + u.White("[-p paths] [-pt types] [-t] [-b] [...]"))
+	fmt.Println("	" + u.Cyan("-p") + "	" + u.White("指定监视的路径，默认为 ./，支持逗号隔开的多个路径，以*结尾代表监听该文件夹下所有类型的文件"))
+	fmt.Println("	" + u.Cyan("-pt") + "	" + u.White("指定监视的文件类型，默认为 .go,.yml 支持逗号隔开的多个类型"))
 	fmt.Println("	" + u.Cyan("-sh") + "	" + u.White("指定执行的命令，默认为 go"))
 	fmt.Println("	" + u.Cyan("-r") + "	" + u.White("执行当前目录中的程序，相当于 go run *.go"))
 	fmt.Println("	" + u.Cyan("-t") + "	" + u.White("执行测试用例，相当于 go test ./tests 或 go test ./tests（自动识别是否存在tests文件夹）"))
@@ -267,19 +276,28 @@ func stop() {
 func watchFiles() bool {
 	changed := false
 	filesModTimeLock.Lock()
-	for fileName, modTime := range filesModTime {
-		info, err := os.Stat(fileName)
+	for filename, modTime := range filesModTime {
+		info, err := os.Stat(filename)
 		if err != nil {
-			delete(filesModTime, fileName)
+			delete(filesModTime, filename)
 			continue
 		}
 		if info.ModTime().Unix() != modTime {
-			filesModTime[fileName] = info.ModTime().Unix()
+			filesModTime[filename] = info.ModTime().Unix()
 			changed = true
 		}
 	}
 	filesModTimeLock.Unlock()
 	return changed
+}
+
+func checkInType(filename string) bool {
+	for _, typ := range watchTypes {
+		if strings.HasSuffix(filename, typ) {
+			return true
+		}
+	}
+	return false
 }
 
 func watchPath(parent string, allType bool) {
@@ -292,29 +310,31 @@ func watchPath(parent string, allType bool) {
 		return
 	}
 	if fileInfo.IsDir() {
-		files, err := ioutil.ReadDir(parent)
+		files, err := os.ReadDir(parent)
 		if err != nil {
 			return
 		}
 
 		for _, file := range files {
-			fileName := file.Name()
+			filename := file.Name()
 			//fileBytes := []byte(file.Name())
-			if fileName[0] == '.' {
+			if filename[0] == '.' {
 				continue
 			}
 			if file.IsDir() {
 				ignored := false
 				for _, ignore := range ignores {
-					if strings.HasPrefix(fileName, ignore) {
+					if strings.HasPrefix(filename, ignore) {
 						ignored = true
 					}
 				}
+				//fmt.Println("watch path:", path.Join(parent, filename), allType)
 				if !ignored {
-					watchPath(parent+ fileName + "/", allType)
+					watchPath(path.Join(parent, filename), allType)
 				}
 			} else {
-				if !allType && !strings.HasSuffix(fileName, ".go") && !strings.HasSuffix(fileName, ".json") && !strings.HasSuffix(fileName, ".yml") {
+				//fmt.Println("watch file:", path.Join(parent,filename), allType)
+				if !allType && !checkInType(filename) {
 					continue
 				}
 				//l := len(fileBytes)
@@ -329,7 +349,7 @@ func watchPath(parent string, allType bool) {
 				filesModTimeLock.Unlock()
 			}
 		}
-	}else{
+	} else {
 		filesModTimeLock.Lock()
 		if filesModTime[parent] == 0 {
 			filesModTime[parent] = 1

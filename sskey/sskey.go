@@ -8,7 +8,6 @@ import (
 	"github.com/ssgo/httpclient"
 	"github.com/ssgo/tool/sskey/sskeylib"
 	"github.com/ssgo/u"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -54,7 +53,7 @@ func main() {
 
 	switch op {
 	case "-l":
-		files, err := ioutil.ReadDir(keyPath)
+		files, err := os.ReadDir(keyPath)
 		if err != nil {
 			fmt.Println(u.Red(err.Error()))
 			return
@@ -155,7 +154,7 @@ func main() {
 				//sb := make([]byte, 0)
 				u.UnJson(bs, &sb)
 				fmt.Println("Encrypting bytes: ", sb)
-			}else{
+			} else {
 				sb = []byte(s)
 				fmt.Println("Encrypting string: ", s)
 			}

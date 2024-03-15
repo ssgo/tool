@@ -7,7 +7,6 @@ import (
 	"github.com/ssgo/log"
 	"github.com/ssgo/u"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -38,7 +37,7 @@ func main() {
 				rootPath += "/"
 			}
 		}
-		files, err := ioutil.ReadDir(rootPath)
+		files, err := os.ReadDir(rootPath)
 		if err != nil {
 			fmt.Println(u.Red(err.Error()))
 			return
@@ -55,7 +54,7 @@ func main() {
 				continue
 			}
 
-			if !u.FileExists(path.Join(fileName, ".git")){
+			if !u.FileExists(path.Join(fileName, ".git")) {
 				continue
 			}
 
@@ -162,7 +161,7 @@ func main() {
 			cacheFile := cachePath + strings.Replace(mod, "/", "_", 20)
 			fs, err := os.Stat(cacheFile)
 			isOk := false
-			if fs != nil && err == nil && fs.ModTime().Unix() >= time.Now().Add(-300 * time.Second).Unix() {
+			if fs != nil && err == nil && fs.ModTime().Unix() >= time.Now().Add(-300*time.Second).Unix() {
 				ver := ""
 				err := u.Load(cacheFile, &ver)
 				if err != nil {
