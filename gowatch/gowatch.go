@@ -63,6 +63,12 @@ func main() {
 			for _, typ := range tmpTypes {
 				watchTypes = append(watchTypes, typ)
 			}
+		case "-ig":
+			i++
+			ignoreList := strings.Split(os.Args[i], ",")
+			for _, igStr := range ignoreList {
+				ignores = append(ignores, igStr)
+			}
 		case "-sh":
 			if i < len(os.Args)-1 && os.Args[i+1][0] != '-' {
 				i++
@@ -142,8 +148,12 @@ func main() {
 		case <-changed:
 			_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
 			curPath, _ := os.Getwd()
-			fmt.Printf("[at "+u.Dim("%s")+"] [watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"] [running "+u.Cyan("%s %s")+"]\n\n", curPath, strings.Join(basePaths, " "), strings.Join(watchTypes, " "), cmd, strings.Join(cmdArgs, " "))
-
+			fmt.Printf("[at "+u.Dim("%s")+"]\n", curPath)
+			fmt.Printf("[watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"]\n", strings.Join(basePaths, " "), strings.Join(watchTypes, " "))
+			if len(ignores) > 0 {
+				fmt.Printf("[ignores "+u.Yellow("/%s")+"]\n", strings.Join(ignores, " /"))
+			}
+			fmt.Printf("[running "+u.Cyan("%s %s")+"]\n\n", cmd, strings.Join(cmdArgs, " "))
 			runPos := -1
 			for i, arg := range cmdArgs {
 				if arg == "run" {
@@ -168,9 +178,10 @@ func main() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("	gowatch " + u.White("[-p paths] [-pt types] [-t] [-b] [...]"))
+	fmt.Println("	gowatch " + u.White("[-p paths] [-pt types] [-ig ignores] [-t] [-b] [...]"))
 	fmt.Println("	" + u.Cyan("-p") + "	" + u.White("指定监视的路径，默认为 ./，支持逗号隔开的多个路径，以*结尾代表监听该文件夹下所有类型的文件"))
 	fmt.Println("	" + u.Cyan("-pt") + "	" + u.White("指定监视的文件类型，默认为 .go,.yml 支持逗号隔开的多个类型"))
+	fmt.Println("	" + u.Cyan("-ig") + "	" + u.White("排除指定的文件夹，默认从 .gitignore 中找到 / 开头的项目进行排除"))
 	fmt.Println("	" + u.Cyan("-sh") + "	" + u.White("指定执行的命令，默认为 go"))
 	fmt.Println("	" + u.Cyan("-r") + "	" + u.White("执行当前目录中的程序，相当于 go run *.go"))
 	fmt.Println("	" + u.Cyan("-t") + "	" + u.White("执行测试用例，相当于 go test ./tests 或 go test ./tests（自动识别是否存在tests文件夹）"))
