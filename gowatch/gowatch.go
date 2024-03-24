@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -123,16 +123,18 @@ func main() {
 	//fmt.Printf("[Watching \033[36m%s\033[0m] [Running \033[36mgo %s\033[0m]\n\n", strings.Join(basePaths, " "), strings.Join(cmdArgs, " "))
 	//runCommand("go", cmdArgs...)
 
-	changed := make(chan bool)
-	go func(changed chan bool) {
+	lastChanges := make([]string, 0)
+	changedChannel := make(chan bool)
+	go func(changedChannel chan bool) {
 		for {
-			if watchFiles() {
+			if changed, changes := watchFiles(); changed {
+				lastChanges = changes
 				stop()
-				changed <- true
+				changedChannel <- true
 			}
 			time.Sleep(time.Millisecond * 500)
 		}
-	}(changed)
+	}(changedChannel)
 
 	go func() {
 		for {
@@ -145,13 +147,19 @@ func main() {
 
 	for {
 		select {
-		case <-changed:
+		case <-changedChannel:
 			_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
 			curPath, _ := os.Getwd()
 			fmt.Printf("[at "+u.Dim("%s")+"]\n", curPath)
 			fmt.Printf("[watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"]\n", strings.Join(basePaths, " "), strings.Join(watchTypes, " "))
 			if len(ignores) > 0 {
-				fmt.Printf("[ignores "+u.Yellow("/%s")+"]\n", strings.Join(ignores, " /"))
+				fmt.Printf("[ignores "+u.Yellow("%s")+"]\n", strings.Join(ignores, " "))
+			}
+			if len(lastChanges) > 0 {
+				fmt.Println("[changed files]")
+				for _, changedFile := range lastChanges {
+					fmt.Println("  >", u.Yellow(changedFile))
+				}
 			}
 			fmt.Printf("[running "+u.Cyan("%s %s")+"]\n\n", cmd, strings.Join(cmdArgs, " "))
 			runPos := -1
@@ -284,8 +292,9 @@ func stop() {
 	}
 }
 
-func watchFiles() bool {
+func watchFiles() (bool, []string) {
 	changed := false
+	changes := make([]string, 0)
 	filesModTimeLock.Lock()
 	for filename, modTime := range filesModTime {
 		info, err := os.Stat(filename)
@@ -295,11 +304,14 @@ func watchFiles() bool {
 		}
 		if info.ModTime().Unix() != modTime {
 			filesModTime[filename] = info.ModTime().Unix()
+			if modTime > 1 {
+				changes = append(changes, filename)
+			}
 			changed = true
 		}
 	}
 	filesModTimeLock.Unlock()
-	return changed
+	return changed, changes
 }
 
 func checkInType(filename string) bool {
@@ -332,19 +344,23 @@ func watchPath(parent string, allType bool) {
 			if filename[0] == '.' {
 				continue
 			}
+			fullFilename := filepath.Join(parent, filename)
+			ignored := false
+			for _, ignore := range ignores {
+				if strings.HasPrefix(fullFilename, ignore) {
+					ignored = true
+					break
+				}
+			}
+			if ignored {
+				continue
+			}
+
 			if file.IsDir() {
-				ignored := false
-				for _, ignore := range ignores {
-					if strings.HasPrefix(filename, ignore) {
-						ignored = true
-					}
-				}
-				//fmt.Println("watch path:", path.Join(parent, filename), allType)
-				if !ignored {
-					watchPath(path.Join(parent, filename), allType)
-				}
+				//fmt.Println("watch path:", fullFilename, allType)
+				watchPath(fullFilename, allType)
 			} else {
-				//fmt.Println("watch file:", path.Join(parent,filename), allType)
+				//fmt.Println("watch file:", filepath.Join(parent,filename), allType)
 				if !allType && !checkInType(filename) {
 					continue
 				}
@@ -352,7 +368,7 @@ func watchPath(parent string, allType bool) {
 				//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
 				//	continue
 				//}
-				fullFileName := path.Join(parent, file.Name())
+				fullFileName := filepath.Join(parent, file.Name())
 				filesModTimeLock.Lock()
 				if filesModTime[fullFileName] == 0 {
 					filesModTime[fullFileName] = 1

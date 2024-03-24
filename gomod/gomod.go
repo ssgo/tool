@@ -9,7 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +54,7 @@ func main() {
 				continue
 			}
 
-			if !u.FileExists(path.Join(fileName, ".git")) {
+			if !u.FileExists(filepath.Join(fileName, ".git")) {
 				continue
 			}
 

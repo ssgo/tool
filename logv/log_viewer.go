@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/ssgo/log"
@@ -17,7 +16,7 @@ import (
 	"time"
 )
 
-//var useJson bool
+// var useJson bool
 var showShortTime bool
 
 func main() {
@@ -61,28 +60,70 @@ func main() {
 		fd = os.Stdin
 	}
 
-	inputReader := bufio.NewReader(fd)
+	//inputReader := bufio.NewReader(fd)
+	inputChan := make(chan string)
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n1, err := fd.Read(buf)
+			if err != nil {
+				if err != io.EOF {
+					fmt.Println(err)
+				}
+				inputChan <- "__EOF__"
+				break
+			}
+			inputChan <- string(buf[0:n1])
+		}
+	}()
+
 	savedLine := ""
 	for {
-		line, err := inputReader.ReadString('\n')
-		//fmt.Println("[", len(line),"]")
-		if len(line) == 4097 && line[4095] != '}' {
-			savedLine += line[0:4096]
-			continue
+		line := ""
+		withWrap := true
+		if savedLine != "" {
+			// 之前有数据
+			pos := strings.IndexByte(savedLine, '\n')
+			if pos != -1 {
+				// 之前有未处理的行
+				line = savedLine[0:pos]
+				savedLine = savedLine[pos+1:]
+			}
+		}
+		if line == "" {
+			// 读取
+			str := ""
+			select {
+			case str = <-inputChan:
+				//fmt.Println("<<", u.BYellow(str))
+			case <-time.After(1 * time.Microsecond * 100):
+				withWrap = false
+			}
+			if str == "__EOF__" {
+				break
+			}
+
+			if str != "" {
+				// 读到数据
+				pos := strings.IndexByte(str, '\n')
+				if pos != -1 {
+					// 读到 \n
+					line = savedLine + str[0:pos]
+					savedLine = str[pos+1:]
+				} else {
+					// 未读到 \n
+					savedLine += str
+					continue
+				}
+			} else {
+				// 超时先输出
+				line = savedLine
+				savedLine = ""
+			}
 		}
 
-		if savedLine != "" {
-			line = savedLine + line
-			savedLine = ""
-		}
 		line = strings.TrimRight(line, "\r\n")
-		output(line)
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println(err)
-			}
-			break
-		}
+		output(line, withWrap)
 	}
 }
 
@@ -91,7 +132,7 @@ func shortTime(tm string) string {
 }
 
 type LevelOutput struct {
-	level string
+	level    string
 	levelKey string
 }
 
@@ -121,7 +162,7 @@ func (levelOutput *LevelOutput) BPrint(v string) {
 
 var errorLineMatcher = regexp.MustCompile("(\\w+\\.go:\\d+)")
 
-func output(line string) {
+func output(line string, withWrap bool) {
 	if line == "" {
 		return
 	}
@@ -137,7 +178,11 @@ func output(line string) {
 				line = errorLineMatcher.ReplaceAllString(line, u.BRed("$1"))
 			}
 		}
-		fmt.Println(line)
+		if withWrap {
+			fmt.Println(line)
+		} else {
+			fmt.Print(line)
+		}
 		return
 	}
 
@@ -271,13 +316,30 @@ func output(line string) {
 		delete(b.Extra, "callStacks")
 	}
 
+	var codeFileMatcher = regexp.MustCompile(`(\w+?\.)(go|js)`)
 	if b.Extra != nil {
 		for k, v := range b.Extra {
 			if k == "extra" && u.String(v)[0] == '{' {
 				extra := map[string]interface{}{}
 				u.UnJson(u.String(v), &extra)
 				for k2, v2 := range extra {
-					fmt.Print("  ", u.White(k2+":", u.AttrDim, u.AttrItalic), u.String(v2))
+					v2Str := u.String(v2)
+					if k2 == "stack" && v2Str != "" {
+						fmt.Println()
+						for _, line := range u.SplitWithoutNone(v2Str, "\n") {
+							a := strings.Split(line, "```")
+							for i := 0; i < len(a); i++ {
+								if i%2 == 0 {
+									a[i] = codeFileMatcher.ReplaceAllString(a[i], u.BRed("$1$2"))
+								} else {
+									a[i] = u.BCyan(a[i])
+								}
+							}
+							fmt.Println("  ", strings.Join(a, ""))
+						}
+					} else {
+						fmt.Print("  ", u.White(k2+":", u.AttrDim, u.AttrItalic), v2Str)
+					}
 				}
 			} else {
 				fmt.Print("  ", u.White(k+":", u.AttrDim, u.AttrItalic), u.String(v))
@@ -294,13 +356,17 @@ func output(line string) {
 			callStacksList, ok = callStacks.([]interface{})
 		}
 
-		if callStacksList != nil {
+		if callStacksList != nil && len(callStacksList) > 0 {
+			fmt.Println()
 			for _, vi := range callStacksList {
 				v := u.String(vi)
 				postfix := ""
 				if pos := strings.LastIndexByte(v, '/'); pos != -1 {
 					postfix = v[pos+1:]
 					v = v[0 : pos+1]
+				} else {
+					postfix = v
+					v = ""
 				}
 				fmt.Print(" ", u.Dim(v))
 				if len(v) > 2 && (v[0] == '/' || v[1] == ':') {
@@ -308,13 +374,16 @@ func output(line string) {
 				} else {
 					lo.Print(postfix)
 				}
+				fmt.Println()
 			}
 		} else {
 			fmt.Print(" ")
 			lo.Print(u.String(callStacks))
 		}
 	}
-	fmt.Println()
+	if withWrap {
+		fmt.Println()
+	}
 }
 
 func printUsage() {
