@@ -21,6 +21,14 @@ var filesModTime = make(map[string]int64)
 var ignores = make([]string, 0)
 var watchTypes = []string{".go", ".yml"}
 
+func getFileAbs(filename string) string {
+	if absName, err := filepath.Abs(filename); err == nil {
+		return absName
+	} else {
+		return filename
+	}
+}
+
 func main() {
 	if len(os.Args) == 1 {
 		printUsage()
@@ -31,7 +39,7 @@ func main() {
 		gitIgnores, _ := u.ReadFileLines(".gitignore")
 		for _, line := range gitIgnores {
 			if len(line) > 0 && line[0] == '/' {
-				ignores = append(ignores, line[1:])
+				ignores = append(ignores, getFileAbs(line[1:]))
 			}
 		}
 	}
@@ -67,7 +75,7 @@ func main() {
 			i++
 			ignoreList := strings.Split(os.Args[i], ",")
 			for _, igStr := range ignoreList {
-				ignores = append(ignores, igStr)
+				ignores = append(ignores, getFileAbs(igStr))
 			}
 		case "-sh":
 			if i < len(os.Args)-1 && os.Args[i+1][0] != '-' {
@@ -344,7 +352,7 @@ func watchPath(parent string, allType bool) {
 			if filename[0] == '.' {
 				continue
 			}
-			fullFilename := filepath.Join(parent, filename)
+			fullFilename := getFileAbs(filepath.Join(parent, filename))
 			ignored := false
 			for _, ignore := range ignores {
 				if strings.HasPrefix(fullFilename, ignore) {
