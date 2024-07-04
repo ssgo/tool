@@ -182,7 +182,9 @@ func main() {
 				buildArgs := append([]string{}, cmdArgs[0:runPos]...)
 				buildArgs = append(buildArgs, "build", "-o", ".run")
 				buildArgs = append(buildArgs, cmdArgs[runPos+1:]...)
-				fmt.Printf("Building "+u.Cyan("%s %s")+"\n", cmd, strings.Join(buildArgs, " "))
+				fmt.Printf("Building "+u.Cyan("%s %s"), cmd, strings.Join(buildArgs, " "))
+				fmt.Println()
+				fmt.Println()
 				runCommand(cmd, buildArgs...)
 				runCommand("./.run", runArgs...)
 			} else {

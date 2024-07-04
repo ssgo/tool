@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"github.com/ssgo/httpclient"
 	"github.com/ssgo/tool/sskey/sskeylib"
@@ -170,8 +171,11 @@ func main() {
 				//s2 = u.DecryptAes(s1, key, iv)
 			}
 
-			fmt.Println("Encrypted: ", u.Yellow(s1))
-			fmt.Println("Encrypted bytes: ", u.UnUrlBase64(s1))
+			s1Bytes := u.UnUrlBase64(s1)
+			fmt.Println("Encrypted base64: ", u.Yellow(u.Base64(s1Bytes)))
+			fmt.Println("Encrypted url base64: ", u.Yellow(s1))
+			fmt.Println("Encrypted hex: ", u.Yellow(hex.EncodeToString(s1Bytes)))
+			fmt.Println("Encrypted bytes: ", s1Bytes)
 			if s2 != string(sb) {
 				fmt.Println(u.Red("Test Failed"))
 				fmt.Println(u.Yellow(s))
@@ -219,11 +223,31 @@ func main() {
 		} else {
 			// 解密字符串
 			var b2 []byte
+			var err error
 			if op == "-d4" {
-				b2 = DecryptSM4(s, key, iv)
+				b2 = DecryptSM4Bytes(u.UnUrlBase64(s), key, iv)
 			} else {
-				b2, _ = u.DecryptAesBytes([]byte(s), key, iv)
+				b2, err = u.DecryptAesBytes(u.UnUrlBase64(s), key, iv)
 			}
+			if err != nil || b2 == nil || len(b2) == 0 {
+				if op == "-d4" {
+					b2 = DecryptSM4Bytes(u.UnBase64(s), key, iv)
+				} else {
+					b2, err = u.DecryptAesBytes(u.UnBase64(s), key, iv)
+				}
+				if err != nil || b2 == nil || len(b2) == 0 {
+					b2e, _ := hex.DecodeString(s)
+					if op == "-d4" {
+						b2 = DecryptSM4Bytes(b2e, key, iv)
+					} else {
+						b2, err = u.DecryptAesBytes(b2e, key, iv)
+					}
+					if err != nil {
+						fmt.Println(u.Red(err.Error()))
+					}
+				}
+			}
+
 			fmt.Println("Decrypted: ", u.Yellow(string(b2)))
 			fmt.Println("Decrypted bytes: ", b2)
 		}
@@ -238,18 +262,22 @@ func main() {
 		if len(os.Args) > 3 {
 			useKey, useIv = loadKey(keyPath + os.Args[2])
 			forKey, forIv = loadKey(keyPath + os.Args[3])
+			fmt.Println("Encrypted key: ", u.Yellow(u.EncryptAes(string(forKey), useKey, useIv)))
+			fmt.Println("Encrypted key bytes: ", u.UnUrlBase64(u.EncryptAes(string(forKey), useKey, useIv)))
+			fmt.Println("Encrypted iv: ", u.Yellow(u.EncryptAes(string(forIv), useKey, useIv)))
+			fmt.Println("Encrypted iv bytes: ", u.UnUrlBase64(u.EncryptAes(string(forIv), useKey, useIv)))
 		} else {
-			useKey = defaultKey
-			useIv = defaultIv
 			forKey, forIv = loadKey(keyPath + os.Args[2])
+			fmt.Println("key base64: ", u.Yellow(u.Base64(forKey)))
+			fmt.Println("key url base64: ", u.Yellow(u.UrlBase64(forKey)))
+			fmt.Println("key hex: ", u.Yellow(hex.EncodeToString(forKey)))
+			fmt.Println("key bytes: ", forKey)
+			fmt.Println("iv base64: ", u.Yellow(u.Base64(forIv)))
+			fmt.Println("iv url base64: ", u.Yellow(u.UrlBase64(forIv)))
+			fmt.Println("iv hex: ", u.Yellow(hex.EncodeToString(forIv)))
+			fmt.Println("iv bytes: ", forIv)
 		}
 
-		fmt.Println("Encrypted key: ", u.Yellow(u.EncryptAes(string(forKey), useKey, useIv)))
-		//fmt.Println("====2", forKey)
-		fmt.Println("Encrypted key bytes: ", u.UnUrlBase64(u.EncryptAes(string(forKey), useKey, useIv)))
-		//fmt.Println("====3", forKey)
-		fmt.Println("Encrypted iv: ", u.Yellow(u.EncryptAes(string(forIv), useKey, useIv)))
-		fmt.Println("Encrypted iv bytes: ", u.UnUrlBase64(u.EncryptAes(string(forIv), useKey, useIv)))
 	case "-sync":
 		syncSSKeys(keyPath)
 	default:
