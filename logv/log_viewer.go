@@ -138,8 +138,10 @@ type LevelOutput struct {
 
 func (levelOutput *LevelOutput) Print(v string) {
 	switch strings.ToLower(levelOutput.level) {
-	case "debug", "info":
+	case "debug":
 		fmt.Print(" ", v)
+	case "info":
+		fmt.Print(" ", u.Cyan(v))
 	case "warning":
 		fmt.Print(" ", u.Yellow(v))
 	case "error":
@@ -150,8 +152,10 @@ func (levelOutput *LevelOutput) Print(v string) {
 
 func (levelOutput *LevelOutput) BPrint(v string) {
 	switch strings.ToLower(levelOutput.level) {
-	case "debug", "info":
+	case "debug":
 		fmt.Print(u.BWhite(v))
+	case "info":
+		fmt.Print(u.BCyan(v))
 	case "warning":
 		fmt.Print(u.BYellow(v))
 	case "error":
