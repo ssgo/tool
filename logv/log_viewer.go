@@ -214,10 +214,9 @@ func output(line string, withWrap bool) {
 		s = t2[1]
 	}
 	t = t2[0]
-	fmt.Print(u.Dim(d), " ")
-	fmt.Print(t)
+	fmt.Print(u.BWhite(d + " " + t))
 	if s != "" {
-		fmt.Print(u.Dim("." + s))
+		fmt.Print(u.White("." + s))
 	}
 	fmt.Print(" ", u.White(b.TraceId, u.AttrDim, u.AttrUnderline))
 
