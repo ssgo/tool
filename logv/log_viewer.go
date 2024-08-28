@@ -165,11 +165,17 @@ func (levelOutput *LevelOutput) BPrint(v string) {
 }
 
 var errorLineMatcher = regexp.MustCompile("(\\w+\\.go:\\d+)")
+var lastOutputIsWrap = false
 
 func output(line string, withWrap bool) {
 	if line == "" {
+		if !lastOutputIsWrap {
+			fmt.Println()
+		}
+		lastOutputIsWrap = true
 		return
 	}
+	lastOutputIsWrap = withWrap
 
 	b := log.ParseBaseLog(line)
 	//fmt.Println(u.JsonP(b))
