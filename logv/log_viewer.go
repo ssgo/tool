@@ -397,13 +397,13 @@ func output(line string, withWrap bool) {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("	lv [-j] [-s] [file]")
-	fmt.Println("	" + u.Cyan("-j") + "	" + u.White("Josn output"))
+	fmt.Println("	logv [-j] [-s] [file]")
+	fmt.Println("	" + u.Cyan("-j") + "	" + u.White("josn output"))
 	fmt.Println("	" + u.Cyan("-s") + "	" + u.White("show full time"))
 	fmt.Println("")
 	fmt.Println("Samples:")
-	fmt.Println("	" + u.Cyan("tail ***.log | lv"))
-	fmt.Println("	" + u.Cyan("lv ***.log"))
-	fmt.Println("	" + u.Cyan("tail ***.log | lv -j -f"))
+	fmt.Println("	" + u.Cyan("tail ***.log | logv"))
+	fmt.Println("	" + u.Cyan("logv ***.log"))
+	fmt.Println("	" + u.Cyan("tail ***.log | logv -j -f"))
 	fmt.Println("")
 }

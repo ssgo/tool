@@ -416,7 +416,8 @@ func loadKey(keyFile string) ([]byte, []byte) {
 }
 
 func printUsage() {
-	fmt.Println("Wellcome to use sskey.")
+	fmt.Println("sskey.")
+	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("	sskey")
 	fmt.Println(u.Cyan("	-l		") + u.White("List all saved keys"))
@@ -438,14 +439,14 @@ func printUsage() {
 	fmt.Println(u.Cyan("	sskey -c aaa"))
 	fmt.Println(u.Cyan("	sskey -t aaa"))
 	fmt.Println(u.Cyan("	sskey -e 123456"))
-	fmt.Println(u.Cyan("	sskey -d vcg9B/GX3Tqf1EWfpfDeMw=="))
+	fmt.Println(u.Cyan("	sskey -d xxxxxx"))
 	fmt.Println(u.Cyan("	sskey -e aaa 123456"))
-	fmt.Println(u.Cyan("	sskey -d aaa gAx9Wq7YN85WKSFj7kBcHg=="))
+	fmt.Println(u.Cyan("	sskey -d aaa xxxxxx"))
 	fmt.Println(u.Cyan("	sskey -php aaa"))
 	fmt.Println(u.Cyan("	sskey -java aaa"))
 	fmt.Println(u.Cyan("	sskey -go aaa"))
 	fmt.Println(u.Cyan("	sskey -o aaa"))
 	fmt.Println(u.Cyan("	sskey -o bbb aaa"))
-	fmt.Println(u.Cyan("	sskey -sync aaa,bbb,ccc http://192.168.3.207/sskeys/token"))
+	fmt.Println(u.Cyan("	sskey -sync aaa,bbb,ccc http://xxxxxx"))
 	fmt.Println("")
 }

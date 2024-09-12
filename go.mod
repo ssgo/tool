@@ -1,6 +1,6 @@
 module github.com/ssgo/tool
 
-go 1.17
+go 1.18
 
 require (
 	github.com/ssgo/httpclient v1.7.7
@@ -12,7 +12,7 @@ require (
 
 require (
 	github.com/ssgo/config v1.7.7 // indirect
-	golang.org/x/net v0.0.0-20201010224723-4f7140c49acb // indirect
-	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/text v0.18.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
