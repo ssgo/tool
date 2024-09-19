@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/ssgo/tool/watcher"
 	"github.com/ssgo/u"
 	"io"
 	"os"
@@ -16,8 +17,9 @@ import (
 	"time"
 )
 
-var filesModTimeLock = sync.Mutex{}
-var filesModTime = make(map[string]int64)
+var lastChangesLock = sync.RWMutex{}
+
+// var filesModTime = make(map[string]int64)
 var ignores = make([]string, 0)
 var watchTypes = []string{".go", ".yml"}
 
@@ -114,84 +116,153 @@ func main() {
 		}
 	}
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
-	go func() {
-		<-c
-		stop()
-		fmt.Println("\nExit")
-		os.Exit(0)
-	}()
-
-	if len(basePaths) == 0 {
-		basePaths = append(basePaths, "./")
-	}
-
-	//os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
-	//fmt.Printf("[Watching \033[36m%s\033[0m] [Running \033[36mgo %s\033[0m]\n\n", strings.Join(basePaths, " "), strings.Join(cmdArgs, " "))
-	//runCommand("go", cmdArgs...)
-
 	lastChanges := make([]string, 0)
-	changedChannel := make(chan bool)
-	go func(changedChannel chan bool) {
-		for {
-			if changed, changes := watchFiles(); changed {
-				lastChanges = changes
-				stop()
-				changedChannel <- true
-			}
-			time.Sleep(time.Millisecond * 500)
-		}
-	}(changedChannel)
 
-	go func() {
-		for {
-			for _, path := range basePaths {
-				watchPath(path, false)
-			}
-			time.Sleep(time.Second * 3)
+	run := func() {
+		_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
+		curPath, _ := os.Getwd()
+		fmt.Printf("[at "+u.Dim("%s")+"]\n", curPath)
+		fmt.Printf("[watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"]\n", strings.Join(basePaths, " "), strings.Join(watchTypes, " "))
+		if len(ignores) > 0 {
+			fmt.Printf("[ignores "+u.Yellow("%s")+"]\n", strings.Join(ignores, " "))
 		}
-	}()
-
-	for {
-		select {
-		case <-changedChannel:
-			_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
-			curPath, _ := os.Getwd()
-			fmt.Printf("[at "+u.Dim("%s")+"]\n", curPath)
-			fmt.Printf("[watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"]\n", strings.Join(basePaths, " "), strings.Join(watchTypes, " "))
-			if len(ignores) > 0 {
-				fmt.Printf("[ignores "+u.Yellow("%s")+"]\n", strings.Join(ignores, " "))
+		lastChangesLock.RLock()
+		if len(lastChanges) > 0 {
+			fmt.Println("[changed files]")
+			for _, changedFile := range lastChanges {
+				fmt.Println("  >", u.Yellow(changedFile))
 			}
-			if len(lastChanges) > 0 {
-				fmt.Println("[changed files]")
-				for _, changedFile := range lastChanges {
-					fmt.Println("  >", u.Yellow(changedFile))
-				}
-			}
-			fmt.Printf("[running "+u.Cyan("%s %s")+"]\n\n", cmd, strings.Join(cmdArgs, " "))
-			runPos := -1
+		}
+		lastChangesLock.RUnlock()
+		fmt.Printf("[running "+u.Cyan("%s %s")+"]\n\n", cmd, strings.Join(cmdArgs, " "))
+		runPos := -1
+		if cmd == "go" {
 			for i, arg := range cmdArgs {
 				if arg == "run" {
 					runPos = i
 					break
 				}
 			}
+		}
 
-			if runPos >= 0 && runArgs != nil {
-				buildArgs := append([]string{}, cmdArgs[0:runPos]...)
-				buildArgs = append(buildArgs, "build", "-o", ".run")
-				buildArgs = append(buildArgs, cmdArgs[runPos+1:]...)
-				fmt.Printf("Building "+u.Cyan("%s %s"), cmd, strings.Join(buildArgs, " "))
-				fmt.Println()
-				fmt.Println()
-				runCommand(cmd, buildArgs...)
-				runCommand("./.run", runArgs...)
-			} else {
-				runCommand(cmd, cmdArgs...)
-			}
+		if runPos >= 0 && runArgs != nil {
+			buildArgs := append([]string{}, cmdArgs[0:runPos]...)
+			buildArgs = append(buildArgs, "build", "-o", ".run")
+			buildArgs = append(buildArgs, cmdArgs[runPos+1:]...)
+			fmt.Printf("Building "+u.Cyan("%s %s"), cmd, strings.Join(buildArgs, " "))
+			fmt.Println()
+			fmt.Println()
+			runCommand(cmd, buildArgs...)
+			runCommand("./.run", runArgs...)
+		} else {
+			runCommand(cmd, cmdArgs...)
 		}
 	}
+
+	isWaiting := false
+	watchCallback := func(filename string, event string) {
+		lastChangesLock.Lock()
+		lastChanges = append(lastChanges, filename)
+		lastChangesLock.Unlock()
+		if !isWaiting {
+			isWaiting = true
+			go func() {
+				time.Sleep(time.Millisecond * 50)
+				run()
+				isWaiting = false
+				lastChangesLock.Lock()
+				lastChanges = make([]string, 0)
+				lastChangesLock.Unlock()
+			}()
+		}
+	}
+
+	if len(basePaths) == 0 {
+		basePaths = append(basePaths, "./")
+	}
+
+	run()
+
+	if w, err := watcher.Start(basePaths, watchTypes, watchCallback); err == nil {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+		go func() {
+			<-c
+			stop()
+			fmt.Println("\nExit")
+			os.Exit(0)
+		}()
+		<-c
+		w.Stop()
+	} else {
+		fmt.Println(err.Error())
+	}
+
+	//os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
+	//fmt.Printf("[Watching \033[36m%s\033[0m] [Running \033[36mgo %s\033[0m]\n\n", strings.Join(basePaths, " "), strings.Join(cmdArgs, " "))
+	//runCommand("go", cmdArgs...)
+
+	//lastChanges := make([]string, 0)
+	//changedChannel := make(chan bool)
+	//go func(changedChannel chan bool) {
+	//	for {
+	//		if changed, changes := watchFiles(); changed {
+	//			lastChanges = changes
+	//			stop()
+	//			changedChannel <- true
+	//		}
+	//		time.Sleep(time.Millisecond * 500)
+	//	}
+	//}(changedChannel)
+
+	//go func() {
+	//	for {
+	//		for _, path := range basePaths {
+	//			watchPath(path, false)
+	//		}
+	//		time.Sleep(time.Second * 3)
+	//	}
+	//}()
+
+	//for {
+	//	select {
+	//	case <-changedChannel:
+	//		_, _ = os.Stdout.WriteString("\x1b[3;J\x1b[H\x1b[2J")
+	//		curPath, _ := os.Getwd()
+	//		fmt.Printf("[at "+u.Dim("%s")+"]\n", curPath)
+	//		fmt.Printf("[watching "+u.Cyan("%s")+" with "+u.Magenta("%s")+"]\n", strings.Join(basePaths, " "), strings.Join(watchTypes, " "))
+	//		if len(ignores) > 0 {
+	//			fmt.Printf("[ignores "+u.Yellow("%s")+"]\n", strings.Join(ignores, " "))
+	//		}
+	//		if len(lastChanges) > 0 {
+	//			fmt.Println("[changed files]")
+	//			for _, changedFile := range lastChanges {
+	//				fmt.Println("  >", u.Yellow(changedFile))
+	//			}
+	//		}
+	//		fmt.Printf("[running "+u.Cyan("%s %s")+"]\n\n", cmd, strings.Join(cmdArgs, " "))
+	//		runPos := -1
+	//		for i, arg := range cmdArgs {
+	//			if arg == "run" {
+	//				runPos = i
+	//				break
+	//			}
+	//		}
+	//
+	//		if runPos >= 0 && runArgs != nil {
+	//			buildArgs := append([]string{}, cmdArgs[0:runPos]...)
+	//			buildArgs = append(buildArgs, "build", "-o", ".run")
+	//			buildArgs = append(buildArgs, cmdArgs[runPos+1:]...)
+	//			fmt.Printf("Building "+u.Cyan("%s %s"), cmd, strings.Join(buildArgs, " "))
+	//			fmt.Println()
+	//			fmt.Println()
+	//			runCommand(cmd, buildArgs...)
+	//			runCommand("./.run", runArgs...)
+	//		} else {
+	//			runCommand(cmd, cmdArgs...)
+	//		}
+	//	}
+	//}
 }
 
 func printUsage() {
@@ -302,95 +373,95 @@ func stop() {
 	}
 }
 
-func watchFiles() (bool, []string) {
-	changed := false
-	changes := make([]string, 0)
-	filesModTimeLock.Lock()
-	for filename, modTime := range filesModTime {
-		info, err := os.Stat(filename)
-		if err != nil {
-			delete(filesModTime, filename)
-			continue
-		}
-		if info.ModTime().Unix() != modTime {
-			filesModTime[filename] = info.ModTime().Unix()
-			if modTime > 1 {
-				changes = append(changes, filename)
-			}
-			changed = true
-		}
-	}
-	filesModTimeLock.Unlock()
-	return changed, changes
-}
-
-func checkInType(filename string) bool {
-	for _, typ := range watchTypes {
-		if strings.HasSuffix(filename, typ) {
-			return true
-		}
-	}
-	return false
-}
-
-func watchPath(parent string, allType bool) {
-	if strings.HasSuffix(parent, string(os.PathSeparator)+"*") {
-		allType = true
-		parent = parent[0 : len(parent)-2]
-	}
-	fileInfo, err := os.Stat(parent)
-	if err != nil {
-		return
-	}
-	if fileInfo.IsDir() {
-		files, err := os.ReadDir(parent)
-		if err != nil {
-			return
-		}
-
-		for _, file := range files {
-			filename := file.Name()
-			//fileBytes := []byte(file.Name())
-			if filename[0] == '.' {
-				continue
-			}
-			fullFilename := getFileAbs(filepath.Join(parent, filename))
-			ignored := false
-			for _, ignore := range ignores {
-				if strings.HasPrefix(fullFilename, ignore) {
-					ignored = true
-					break
-				}
-			}
-			if ignored {
-				continue
-			}
-
-			if file.IsDir() {
-				//fmt.Println("watch path:", fullFilename, allType)
-				watchPath(fullFilename, allType)
-			} else {
-				//fmt.Println("watch file:", filepath.Join(parent,filename), allType)
-				if !allType && !checkInType(filename) {
-					continue
-				}
-				//l := len(fileBytes)
-				//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
-				//	continue
-				//}
-				fullFileName := filepath.Join(parent, file.Name())
-				filesModTimeLock.Lock()
-				if filesModTime[fullFileName] == 0 {
-					filesModTime[fullFileName] = 1
-				}
-				filesModTimeLock.Unlock()
-			}
-		}
-	} else {
-		filesModTimeLock.Lock()
-		if filesModTime[parent] == 0 {
-			filesModTime[parent] = 1
-		}
-		filesModTimeLock.Unlock()
-	}
-}
+//func watchFiles() (bool, []string) {
+//	changed := false
+//	changes := make([]string, 0)
+//	filesModTimeLock.Lock()
+//	for filename, modTime := range filesModTime {
+//		info, err := os.Stat(filename)
+//		if err != nil {
+//			delete(filesModTime, filename)
+//			continue
+//		}
+//		if info.ModTime().Unix() != modTime {
+//			filesModTime[filename] = info.ModTime().Unix()
+//			if modTime > 1 {
+//				changes = append(changes, filename)
+//			}
+//			changed = true
+//		}
+//	}
+//	filesModTimeLock.Unlock()
+//	return changed, changes
+//}
+//
+//func checkInType(filename string) bool {
+//	for _, typ := range watchTypes {
+//		if strings.HasSuffix(filename, typ) {
+//			return true
+//		}
+//	}
+//	return false
+//}
+//
+//func watchPath(parent string, allType bool) {
+//	if strings.HasSuffix(parent, string(os.PathSeparator)+"*") {
+//		allType = true
+//		parent = parent[0 : len(parent)-2]
+//	}
+//	fileInfo, err := os.Stat(parent)
+//	if err != nil {
+//		return
+//	}
+//	if fileInfo.IsDir() {
+//		files, err := os.ReadDir(parent)
+//		if err != nil {
+//			return
+//		}
+//
+//		for _, file := range files {
+//			filename := file.Name()
+//			//fileBytes := []byte(file.Name())
+//			if filename[0] == '.' {
+//				continue
+//			}
+//			fullFilename := getFileAbs(filepath.Join(parent, filename))
+//			ignored := false
+//			for _, ignore := range ignores {
+//				if strings.HasPrefix(fullFilename, ignore) {
+//					ignored = true
+//					break
+//				}
+//			}
+//			if ignored {
+//				continue
+//			}
+//
+//			if file.IsDir() {
+//				//fmt.Println("watch path:", fullFilename, allType)
+//				watchPath(fullFilename, allType)
+//			} else {
+//				//fmt.Println("watch file:", filepath.Join(parent,filename), allType)
+//				if !allType && !checkInType(filename) {
+//					continue
+//				}
+//				//l := len(fileBytes)
+//				//if l < 4 || fileBytes[l-3] != '.' || fileBytes[l-2] != 'g' || fileBytes[l-1] != 'o' {
+//				//	continue
+//				//}
+//				fullFileName := filepath.Join(parent, file.Name())
+//				filesModTimeLock.Lock()
+//				if filesModTime[fullFileName] == 0 {
+//					filesModTime[fullFileName] = 1
+//				}
+//				filesModTimeLock.Unlock()
+//			}
+//		}
+//	} else {
+//		filesModTimeLock.Lock()
+//		if filesModTime[parent] == 0 {
+//			filesModTime[parent] = 1
+//		}
+//		filesModTimeLock.Unlock()
+//	}
+//}
