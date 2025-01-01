@@ -1,11 +1,16 @@
 package watcher
 
 import (
-	"github.com/fsnotify/fsnotify"
-	"github.com/ssgo/u"
+	"crypto/md5"
+	"encoding/hex"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/ssgo/u"
 )
 
 const (
@@ -19,8 +24,11 @@ type Watcher struct {
 	watcher   *fsnotify.Watcher
 	isRunning bool
 	fileTypes []string
+	ignores   []string
 	callback  func(string, string)
 	stopChan  chan bool
+	hash      map[string]string
+	hashLock  sync.RWMutex
 }
 
 func (w *Watcher) Stop() {
@@ -52,6 +60,30 @@ func (w *Watcher) Add(path string) error {
 	return w.add(path, false)
 }
 
+func getHash(filename string) string {
+	if fp, err := os.Open(filename); err == nil {
+		defer fp.Close()
+		hash := md5.New()
+		if _, err = io.Copy(hash, fp); err == nil {
+			return hex.EncodeToString(hash.Sum(nil))
+		}
+	}
+	return ""
+}
+
+func (w *Watcher) isIgnore(filename string) bool {
+	for _, ignore := range w.ignores {
+		if strings.HasPrefix(ignore, "*/") {
+			if strings.Contains(filename, strings.ReplaceAll(ignore[1:], "/", string(os.PathSeparator))) {
+				return true
+			}
+		} else if strings.HasPrefix(filename, ignore) {
+			return true
+		}
+	}
+	return false
+}
+
 func (w *Watcher) add(path string, checkFile bool) error {
 	if !w.isRunning {
 		return nil
@@ -70,12 +102,19 @@ func (w *Watcher) add(path string, checkFile bool) error {
 			if !w.isRunning {
 				break
 			}
+			if w.isIgnore(f.FullName) {
+				continue
+			}
 			if f.IsDir {
 				if err := w.Add(f.FullName); err != nil {
 					outErr = err
 				}
-			} else if checkFile {
-				if w.inType(f.FullName) {
+			} else {
+				// fmt.Println("add file", u.BMagenta(f.FullName))
+				w.hashLock.Lock()
+				w.hash[f.FullName] = getHash(f.FullName)
+				w.hashLock.Unlock()
+				if checkFile && w.inType(f.FullName) {
 					w.callback(f.FullName, Create)
 				}
 			}
@@ -118,15 +157,30 @@ func (w *Watcher) WatchList() []string {
 	return w.watcher.WatchList()
 }
 
-func Start(paths, fileTypes []string, callback func(filename string, event string)) (*Watcher, error) {
+func Start(paths, fileTypes, ignores []string, callback func(filename string, event string)) (*Watcher, error) {
 	if watcher, err := fsnotify.NewWatcher(); err == nil {
 		if paths == nil {
 			paths = make([]string, 0)
 		}
+		if ignores == nil {
+			ignores = make([]string, 0)
+		}
+		// */ 开头的匹配任意路径的开头，否则匹配绝对路径
+		for i, ignorePath := range ignores {
+			if strings.HasPrefix(ignorePath, "*/") {
+				continue
+			}
+			if absPath, err := filepath.Abs(ignorePath); err == nil {
+				ignores[i] = absPath
+			}
+		}
+
 		w := &Watcher{
 			watcher:   watcher,
 			callback:  callback,
 			isRunning: true,
+			ignores:   ignores,
+			hash:      map[string]string{},
 		}
 		w.SetFileTypes(fileTypes)
 		for _, path := range paths {
@@ -145,7 +199,7 @@ func Start(paths, fileTypes []string, callback func(filename string, event strin
 					eventFilename := event.Name
 					if event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
 						w.Remove(eventFilename)
-						if w.inType(eventFilename) {
+						if w.inType(eventFilename) && !w.isIgnore(eventFilename) {
 							if event.Has(fsnotify.Remove) {
 								callback(eventFilename, Remove)
 							} else {
@@ -153,7 +207,7 @@ func Start(paths, fileTypes []string, callback func(filename string, event strin
 							}
 						}
 					} else if event.Has(fsnotify.Write) {
-						if w.inType(eventFilename) {
+						if w.inType(eventFilename) && !w.isIgnore(eventFilename) {
 							callback(eventFilename, Change)
 						}
 					} else if event.Has(fsnotify.Create) {
@@ -161,7 +215,7 @@ func Start(paths, fileTypes []string, callback func(filename string, event strin
 						if fileInfo.IsDir {
 							_ = w.add(eventFilename, true)
 						} else {
-							if w.inType(eventFilename) {
+							if w.inType(eventFilename) && !w.isIgnore(eventFilename) {
 								callback(eventFilename, Create)
 							}
 						}
