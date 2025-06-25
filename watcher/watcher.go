@@ -212,7 +212,7 @@ func Start(paths, fileTypes, ignores []string, callback func(filename string, ev
 						}
 					} else if event.Has(fsnotify.Create) {
 						fileInfo := u.GetFileInfo(event.Name)
-						if fileInfo.IsDir {
+						if fileInfo != nil && fileInfo.IsDir {
 							_ = w.add(eventFilename, true)
 						} else {
 							if w.inType(eventFilename) && !w.isIgnore(eventFilename) {

@@ -3,8 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/ssgo/tool/watcher"
-	"github.com/ssgo/u"
 	"io"
 	"os"
 	"os/exec"
@@ -15,6 +13,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/ssgo/tool/watcher"
+	"github.com/ssgo/u"
 )
 
 var lastChangesLock = sync.RWMutex{}
@@ -183,7 +184,7 @@ func main() {
 
 	run()
 
-	if w, err := watcher.Start(basePaths, watchTypes, watchCallback); err == nil {
+	if w, err := watcher.Start(basePaths, watchTypes, ignores, watchCallback); err == nil {
 		exitCh := make(chan os.Signal, 1)
 		closeCh := make(chan bool, 1)
 		signal.Notify(exitCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
